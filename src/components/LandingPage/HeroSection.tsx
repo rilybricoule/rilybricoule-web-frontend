@@ -82,9 +82,7 @@ export function HeroSection() {
               </div>
 
               <p className="text-gray-700 mb-8 leading-relaxed text-lg">
-                Facilitez l'accès aux services à domicile. Trouvez et réservez des artisans 
-                qualifiés près de chez vous. Offrez une nouvelle vitrine et source de revenus 
-                aux prestataires de services de bricolage.
+                Découvrez les Meilleurs Services à Domicile pour Simplifier Votre Vie : Dans un monde où le temps est précieux, découvrez les meilleurs services à domicile qui transformeront votre quotidien. Simplifiez votre vie dès aujourd'hui !
               </p>
 
               <div className="flex flex-wrap gap-4">
