@@ -149,4 +149,16 @@
   .bg-pos-100 {
     background-position: 100% 50%;
   }
-}
+    /* Classes utilitaires pour les gradients animés */
+  .bg-size-200 {
+    background-size: 200% 100%;
+  }
+
+  .bg-pos-0 {
+    background-position: 0% 50%;
+  }
+
+  .bg-pos-100 {
+    background-position: 100% 50%;
+  }
+  }
