@@ -1,4 +1,11 @@
 import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { AuthProvider } from './context/AuthContext';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { FacebookCallbackPage } from './pages/Facebookcallbackpage';
+// Landing Page Components
 import { Navbar } from './components/LandingPage/Navbar';
 import { HeroSection } from './components/LandingPage/HeroSection';
 import { ServiceCategories } from './components/LandingPage/ServiceCategories';
@@ -8,9 +15,8 @@ import { Testimonials } from './components/LandingPage/Testimonials';
 import { CTASection } from './components/LandingPage/CTASection';
 import { Footer } from './components/LandingPage/Footer';
 import { ProgressBar } from './components/LandingPage/ProgressBar';
-
-export function App() {
-  // Scroll reveal functionality
+import { HeroSearch } from './components/LandingPage/Search';
+function LandingPage() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -35,6 +41,7 @@ export function App() {
       <ProgressBar />
       <Navbar />
       <main>
+        <HeroSearch />
         <HeroSection />
         <ServiceCategories />
         <HowItWorks />
@@ -44,5 +51,25 @@ export function App() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+export function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'demo-client-id';
+
+  return (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/auth/facebook/callback" element={<FacebookCallbackPage />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
