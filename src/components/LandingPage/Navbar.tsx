@@ -63,20 +63,22 @@ export function Navbar() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <motion.button 
+            <motion.a
+              href="/login"
               className="text-blue-600 font-semibold hover:text-blue-800 transition-colors px-5 py-2.5 border-2 border-blue-600 rounded-full hover:bg-blue-50"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               Connexion
-            </motion.button>
-            <motion.button 
+            </motion.a>
+            <motion.a
+              href="/login"
               className="bg-gradient-to-r from-blue-600 via-orange-500 to-blue-600 bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-6 py-2.5 rounded-full font-semibold shadow-md hover:shadow-xl transition-all duration-300"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               Inscription
-            </motion.button>
+            </motion.a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -112,12 +114,20 @@ export function Navbar() {
                 </a>
               ))}
               <div className="pt-4 flex flex-col space-y-3">
-                <button className="w-full text-center text-blue-600 font-semibold py-3 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                <a
+                  href="/login"
+                  className="w-full text-center text-blue-600 font-semibold py-3 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors block"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
                   Connexion
-                </button>
-                <button className="w-full text-center bg-gradient-to-r from-blue-600 via-orange-500 to-blue-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-shadow">
+                </a>
+                <a
+                  href="/login"
+                  className="w-full text-center bg-gradient-to-r from-blue-600 via-orange-500 to-blue-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-shadow block"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
                   Inscription
-                </button>
+                </a>
               </div>
             </div>
           </motion.div>
