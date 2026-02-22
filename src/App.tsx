@@ -5,6 +5,9 @@ import { AuthProvider } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { FacebookCallbackPage } from './pages/Facebookcallbackpage';
+import { ClientDashboard } from './pages/ClientDashboard';
+import { PrestataireDashboard } from './pages/PrestataireDashboard';
+
 // Landing Page Components
 import { Navbar } from './components/LandingPage/Navbar';
 import { HeroSection } from './components/LandingPage/HeroSection';
@@ -16,6 +19,7 @@ import { CTASection } from './components/LandingPage/CTASection';
 import { Footer } from './components/LandingPage/Footer';
 import { ProgressBar } from './components/LandingPage/ProgressBar';
 import { HeroSearch } from './components/LandingPage/Search';
+
 function LandingPage() {
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -62,11 +66,22 @@ export function App() {
       <AuthProvider>
         <Router>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/auth/facebook/callback" element={<FacebookCallbackPage />} />
+
+            {/* Client dashboard */}
+            <Route path="/dashboard/client" element={<ClientDashboard />} />
+            <Route path="/dashboard/client/*" element={<ClientDashboard />} />
+
+            {/* Prestataire dashboard */}
+            <Route path="/dashboard/prestataire" element={<PrestataireDashboard />} />
+            <Route path="/dashboard/prestataire/*" element={<PrestataireDashboard />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </AuthProvider>
