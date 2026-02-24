@@ -2,7 +2,7 @@ name: Frontend CI - Staging
 
 on:
   push:
-    branches: [ "develop" ]  # CI sur la branche develop pour staging
+    branches: [ "develop" ]  
 
 jobs:
   build-test:
@@ -20,7 +20,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Run tests
         run: npm test -- --watchAll=false
