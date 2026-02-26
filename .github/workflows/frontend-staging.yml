@@ -42,5 +42,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_FACEBOOK_APP_ID=${{ secrets.VITE_FACEBOOK_APP_ID }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/rilybricoule-frontend:latest
