@@ -1,5 +1,12 @@
 # Stage 1: Build
 FROM node:18-alpine AS build
+
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_FACEBOOK_APP_ID
+
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_FACEBOOK_APP_ID=$VITE_FACEBOOK_APP_ID
+
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
