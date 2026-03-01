@@ -5,9 +5,8 @@ import { AuthProvider } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { FacebookCallbackPage } from './pages/Facebookcallbackpage';
-import { ClientDashboard } from './pages/ClientDashboard';
 import { PrestataireDashboard } from './pages/PrestataireDashboard';
-
+import { ClientInterface } from './pages/ClientInterface';
 // Landing Page Components
 import { Navbar } from './components/LandingPage/Navbar';
 import { HeroSection } from './components/LandingPage/HeroSection';
@@ -73,8 +72,7 @@ export function App() {
             <Route path="/auth/facebook/callback" element={<FacebookCallbackPage />} />
 
             {/* Client dashboard */}
-            <Route path="/dashboard/client" element={<ClientDashboard />} />
-            <Route path="/dashboard/client/*" element={<ClientDashboard />} />
+            <Route path="/dashboard/client" element={<ClientInterface />} />
 
             {/* Prestataire dashboard */}
             <Route path="/dashboard/prestataire" element={<PrestataireDashboard />} />
@@ -82,6 +80,7 @@ export function App() {
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
+           
           </Routes>
         </Router>
       </AuthProvider>
