@@ -10,7 +10,7 @@ import { ProProfilePage } from './ProProfilePage';
 import { TrackingPage } from './TrackingPage';
 import { MessagesPage } from './MessagesPage';
 import { BookingPage } from './BookingPage';
-import { BookingConfirmationPage } from './BookingConfirmationPage';
+import { BookingConfirmationPage } from './Bookingconfirmationpage';
 import { PaymentPage } from './PaymentPage';
 import { ReviewPage } from './ReviewPage';
 import { FaqPage } from './FaqPage';
