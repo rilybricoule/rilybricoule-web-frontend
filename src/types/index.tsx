@@ -6,6 +6,7 @@ export type View =
   | 'tracking'
   | 'messages'
   | 'booking'
+  | 'booking-confirm' 
   | 'payment'
   | 'review'
   | 'faq'
@@ -29,6 +30,7 @@ export interface Pro {
   bio: string;
   lat: number;
   lng: number;
+  activeJobs?: number;
   portfolio: PortfolioItem[];
   phone: string;
   completedJobs: number;
@@ -101,6 +103,7 @@ export interface BookingDetails {
   cardExpiry?: string;
   cardCVV?: string;
 }
+
 
 export interface FaqItem {
   id: number;

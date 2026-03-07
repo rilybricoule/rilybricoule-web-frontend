@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Star, MapPin, Phone, MessageSquare, Calendar, BadgeCheck,
+  Star, MapPin, Calendar, BadgeCheck,
   ChevronLeft, Clock, CheckCircle2, Briefcase, User,
-  Navigation, Shield, Award, Camera,
+  Navigation, Shield, Award, Camera, Lock,
 } from 'lucide-react';
 import type { Pro } from '../types';
 
@@ -11,19 +11,20 @@ interface ProProfilePageProps {
   pro: Pro;
   onBack: () => void;
   onBook: (pro: Pro) => void;
-  onMessage: (pro: Pro) => void;
   onTrack: (pro: Pro) => void;
+  /** Pass true only when the user has a confirmed + paid booking with this pro */
+  hasActiveBooking?: boolean;
 }
 
 type Tab = 'about' | 'portfolio' | 'reviews';
 
-export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProProfilePageProps) {
+export function ProProfilePage({ pro, onBack, onBook, onTrack, hasActiveBooking = false }: ProProfilePageProps) {
   const [tab, setTab] = useState<Tab>('about');
 
   return (
     <div className="flex flex-col h-full bg-[#F2F3F5] overflow-hidden">
 
-      {/* ── STICKY BACK BUTTON only (absolutely minimal fixed chrome) ─── */}
+      {/* ── STICKY BACK BUTTON ─────────────────────────────────────────── */}
       <div className={`bg-gradient-to-r ${pro.avatarColor} shrink-0 px-4 pt-3 pb-0`}>
         <button onClick={onBack}
           className="flex items-center gap-1 text-white/70 hover:text-white text-xs font-semibold bg-black/10 hover:bg-black/20 px-2.5 py-1.5 rounded-lg transition-all w-fit mb-3">
@@ -31,21 +32,19 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
         </button>
       </div>
 
-      {/* ── SCROLLABLE AREA: header + stats + buttons + tab content ──── */}
+      {/* ── SCROLLABLE AREA ────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto">
 
-        {/* HERO — large, rich, scrolls away */}
+        {/* HERO */}
         <div className={`bg-gradient-to-br ${pro.avatarColor} relative overflow-hidden pb-6`}>
           <div className="absolute right-0 inset-y-0 flex items-center pr-4 text-[150px] font-black text-white/[0.06] select-none pointer-events-none leading-none">
             {pro.avatar}
           </div>
           <div className="relative px-5 pt-1">
             <div className="flex items-start gap-4">
-              {/* Big avatar */}
               <div className="w-20 h-20 rounded-3xl bg-white/25 border-2 border-white/40 flex items-center justify-center text-3xl font-black text-white shadow-2xl shrink-0 mt-1">
                 {pro.avatar}
               </div>
-              {/* Info */}
               <div className="flex-1 min-w-0 pt-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl font-black text-white leading-tight">{pro.name}</h1>
@@ -71,7 +70,7 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
               </div>
             </div>
 
-            {/* Stats row — inside hero, part of scrollable content */}
+            {/* Stats row */}
             <div className="grid grid-cols-4 gap-2 mt-5">
               {[
                 { icon: <Star size={14} className="fill-amber-300 text-amber-300" />, val: pro.rating.toString(), sub: `${pro.reviews} avis` },
@@ -89,7 +88,7 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
           </div>
         </div>
 
-        {/* BADGES + ACTION BUTTONS — on white, just below hero */}
+        {/* BADGES + ACTION BUTTONS */}
         <div className="bg-white px-4 py-4 border-b border-gray-100 shadow-sm">
           {(pro.verified || pro.completedJobs > 100) && (
             <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -105,11 +104,22 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
               )}
             </div>
           )}
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => onMessage(pro)}
-              className="flex items-center justify-center gap-1.5 py-3 border-2 border-[#1E5BB8]/30 text-[#1E5BB8] rounded-xl font-bold text-sm hover:bg-blue-50 hover:border-[#1E5BB8]/60 transition-all">
-              <MessageSquare size={15} /> Message
-            </button>
+
+          {/* Messaging gate banner */}
+          {!hasActiveBooking && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-3">
+              <Lock size={15} className="text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-black text-amber-800">Contact disponible après réservation</p>
+                <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
+                  Réservez et payez pour débloquer la messagerie avec ce prestataire.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
             <button onClick={() => onBook(pro)} disabled={!pro.available}
               className={`flex items-center justify-center gap-1.5 py-3 rounded-xl font-bold text-sm transition-all ${
                 pro.available
@@ -125,7 +135,7 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
           </div>
         </div>
 
-        {/* TABS — sticky so they stick as you scroll tab content */}
+        {/* TABS */}
         <div className="sticky top-0 z-20 flex bg-white border-b border-gray-100 shadow-sm">
           {(['about', 'portfolio', 'reviews'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -141,7 +151,7 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
           ))}
         </div>
 
-        {/* TAB CONTENT — no separate scroll container, just flows naturally */}
+        {/* TAB CONTENT */}
         <AnimatePresence mode="wait">
 
           {/* À PROPOS */}
@@ -159,6 +169,7 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
                   <p className="text-sm text-gray-600 leading-relaxed">{pro.bio}</p>
                 </div>
               </div>
+
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2.5 px-5 py-3.5 bg-gray-50/70 border-b border-gray-100">
                   <div className="w-8 h-8 rounded-xl bg-[#1E5BB8]/10 flex items-center justify-center shrink-0">
@@ -176,24 +187,37 @@ export function ProProfilePage({ pro, onBack, onBook, onMessage, onTrack }: ProP
                   </div>
                 </div>
               </div>
+
+              {/* Contact card — locked unless booking confirmed */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2.5 px-5 py-3.5 bg-gray-50/70 border-b border-gray-100">
                   <div className="w-8 h-8 rounded-xl bg-[#1E5BB8]/10 flex items-center justify-center shrink-0">
-                    <Phone size={14} className="text-[#1E5BB8]" />
+                    <Lock size={14} className="text-[#1E5BB8]" />
                   </div>
-                  <h3 className="font-black text-gray-900 text-sm">Contact</h3>
+                  <h3 className="font-black text-gray-900 text-sm">Coordonnées</h3>
                 </div>
-                <div className="px-5 py-4">
-                  <a href={`tel:${pro.phone}`}
-                    className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-4 border border-gray-100 hover:border-[#1E5BB8]/30 hover:bg-blue-50/50 transition-all group">
-                    <div className="w-11 h-11 bg-[#1E5BB8]/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#1E5BB8]/20 transition-colors">
-                      <Phone size={17} className="text-[#1E5BB8]" />
+                <div className="px-5 py-5">
+                  {hasActiveBooking ? (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-4 border border-gray-100">
+                      <div className="w-11 h-11 bg-[#1E5BB8]/10 rounded-xl flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={17} className="text-[#1E5BB8]" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Téléphone direct</p>
+                        <p className="font-black text-gray-900 text-base">{pro.phone}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Téléphone direct</p>
-                      <p className="font-black text-gray-900 text-base">{pro.phone}</p>
+                  ) : (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-4 border border-dashed border-gray-200">
+                      <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
+                        <Lock size={17} className="text-gray-300" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 font-semibold">Numéro masqué</p>
+                        <p className="text-sm text-gray-400 mt-0.5">Disponible après réservation confirmée</p>
+                      </div>
                     </div>
-                  </a>
+                  )}
                 </div>
               </div>
             </motion.div>

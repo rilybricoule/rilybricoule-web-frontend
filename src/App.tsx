@@ -45,12 +45,12 @@ function LandingPage() {
       <Navbar />
       <main>
         <HeroSearch />
-        <HeroSection />
         <ServiceCategories />
         <HowItWorks />
         <FeaturedProfessionals />
         <Testimonials />
         <CTASection />
+        <HeroSection />
       </main>
       <Footer />
     </div>

@@ -1,5 +1,43 @@
-import React, { useState } from 'react';
+/**
+ * MapPage.tsx — Real Google Maps JavaScript API integration
+ *
+ * ─── SETUP ──────────────────────────────────────────────────────────────────
+ *
+ * 1. INSTALL DEPENDENCIES:
+ *    npm install @vis.gl/react-google-maps
+ *    (framer-motion and lucide-react should already be installed)
+ *
+ * 2. ADD YOUR API KEY:
+ *    Replace the string "YOUR_GOOGLE_MAPS_API_KEY" on line ~73 with your real key.
+ *    OR (recommended) store it in your .env file:
+ *      VITE_GOOGLE_MAPS_API_KEY=your_key_here   ← for Vite projects
+ *      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key  ← for Next.js projects
+ *    Then use: process.env.VITE_GOOGLE_MAPS_API_KEY  or  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ *
+ * 3. ENABLE THESE APIS in Google Cloud Console:
+ *    - Maps JavaScript API
+ *    - (Optional) Places API — for future search autocomplete
+ *
+ * 4. WRAP YOUR APP (in App.tsx or _app.tsx):
+ *    import { APIProvider } from '@vis.gl/react-google-maps';
+ *    <APIProvider apiKey={YOUR_KEY}>
+ *      <App />
+ *    </APIProvider>
+ *    NOTE: If you wrap the whole app, remove the <APIProvider> wrapper inside this file.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  Pin,
+  useMap,
+  InfoWindow,
+} from '@vis.gl/react-google-maps';
 import {
   Star, X, BadgeCheck, ChevronRight, Clock, MapPin,
   Filter, Heart, Check, SlidersHorizontal, ChevronDown,
@@ -7,6 +45,28 @@ import {
 } from 'lucide-react';
 import type { Pro, Filters, ServiceCategory } from '../types';
 import { SERVICE_CATEGORIES } from '../data/mockdata';
+
+// ─── 🔑 API KEY — Replace this with your real key or use env variable ────────
+const GOOGLE_MAPS_API_KEY = 'AIzaSyAPfb93bmRpz_zRG9xvToYy_5kv39xyo4o';
+// const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;   // Vite
+// const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY; // Next.js
+
+// ─── Map center: Casablanca ──────────────────────────────────────────────────
+const CASABLANCA_CENTER = { lat: 33.5893, lng: -7.6114 };
+
+// ─── Custom map style (dark navy theme to match the UI) ──────────────────────
+const MAP_STYLES: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#e8f0f7' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f9ff' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#4a6fa5' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#f0f4fa' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#dde8f5' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a8c8e8' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c8e6c9' }] },
+  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+];
 
 interface MapPageProps {
   filteredPros: Pro[];
@@ -95,21 +155,21 @@ function SwipeCardMap({ pro, onSwipe, isTop, onView }: {
   );
 }
 
-/* ─── Swipe Overlay (full-screen, blurred map behind) ───────────────────────── */
+/* ─── Swipe Overlay ─────────────────────────────────────────────────────────── */
 function MapSwipeOverlay({ pros, onClose, onViewPro, onSwipeFinished }: {
   pros: Pro[]; onClose: () => void;
   onViewPro: (pro: Pro) => void;
   onSwipeFinished: (likedIds: number[]) => void;
 }) {
-  const [stack, setStack]     = useState(() => [...pros].map(p => p.id));
-  const [liked, setLiked]     = useState<number[]>([]);
+  const [stack, setStack] = useState(() => [...pros].map(p => p.id));
+  const [liked, setLiked] = useState<number[]>([]);
   const [showLiked, setShowLiked] = useState(false);
 
-  const currentId  = stack[stack.length - 1];
-  const nextId     = stack[stack.length - 2];
+  const currentId = stack[stack.length - 1];
+  const nextId = stack[stack.length - 2];
   const currentPro = pros.find(p => p.id === currentId);
-  const nextPro    = pros.find(p => p.id === nextId);
-  const likedPros  = pros.filter(p => liked.includes(p.id));
+  const nextPro = pros.find(p => p.id === nextId);
+  const likedPros = pros.filter(p => liked.includes(p.id));
 
   const handleSwipe = (dir: 'left' | 'right') => {
     if (!currentId) return;
@@ -117,29 +177,16 @@ function MapSwipeOverlay({ pros, onClose, onViewPro, onSwipeFinished }: {
     if (dir === 'right') setLiked(newLiked);
     const newStack = stack.slice(0, -1);
     setStack(newStack);
-    // When all done, auto-notify parent
-    if (newStack.length === 0 && newLiked.length > 0) {
-      onSwipeFinished(newLiked);
-    }
+    if (newStack.length === 0 && newLiked.length > 0) onSwipeFinished(newLiked);
   };
 
-  const handleApply = () => {
-    onSwipeFinished(liked);
-    onClose();
-  };
-
-  const handleReset = () => {
-    setStack(pros.map(p => p.id));
-    setLiked([]);
-    onSwipeFinished([]);
-  };
+  const handleApply = () => { onSwipeFinished(liked); onClose(); };
+  const handleReset = () => { setStack(pros.map(p => p.id)); setLiked([]); onSwipeFinished([]); };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex flex-col">
-      {/* Blurred dark map background */}
       <div className="absolute inset-0 bg-[#1a2d5a]/75 backdrop-blur-md" onClick={onClose} />
-
       <div className="relative flex flex-col items-center justify-center h-full px-4 py-4 pointer-events-none">
 
         {/* Top bar */}
@@ -197,7 +244,7 @@ function MapSwipeOverlay({ pros, onClose, onViewPro, onSwipeFinished }: {
             <p className="text-white/60 text-sm mb-6">
               {liked.length > 0
                 ? `Vous avez aimé ${liked.length} prestataire${liked.length > 1 ? 's' : ''}. Ils apparaissent sur la carte.`
-                : 'Vous n\'avez aimé aucun prestataire.'}
+                : "Vous n'avez aimé aucun prestataire."}
             </p>
             {liked.length > 0 && (
               <button onClick={handleApply}
@@ -224,7 +271,7 @@ function MapSwipeOverlay({ pros, onClose, onViewPro, onSwipeFinished }: {
           </div>
         )}
 
-        {/* Buttons */}
+        {/* Swipe buttons */}
         {stack.length > 0 && (
           <>
             <div className="pointer-events-auto flex items-center gap-6 mt-5">
@@ -251,360 +298,399 @@ function MapSwipeOverlay({ pros, onClose, onViewPro, onSwipeFinished }: {
   );
 }
 
-/* ─── Simulated Map ─────────────────────────────────────────────────────────── */
-function SimulatedMap({ pros, selectedPro, onSelectPro }: {
-  pros: Pro[]; selectedPro: Pro | null; onSelectPro: (p: Pro) => void;
+/* ─── Custom Pro Marker (rendered inside AdvancedMarker) ────────────────────── */
+function ProMarker({ pro, isSelected, onClick }: {
+  pro: Pro; isSelected: boolean; onClick: () => void;
 }) {
-  const LAT_MIN = 33.555, LAT_MAX = 33.625, LNG_MIN = -7.690, LNG_MAX = -7.530;
-  const nx = (v: number, min: number, max: number) => ((v - min) / (max - min)) * 100;
-
   return (
-    <div className="absolute inset-0 bg-[#e8f0f7] overflow-hidden">
-      <svg className="absolute inset-0 w-full h-full opacity-15" aria-hidden>
-        <defs>
-          <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#3b82f6" strokeWidth="0.5" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-      </svg>
-      {/* Streets */}
-      <div className="absolute top-[30%] left-0 right-0 h-3 bg-white/90 shadow-sm" />
-      <div className="absolute top-[55%] left-0 right-0 h-2 bg-white/75" />
-      <div className="absolute top-[15%] left-0 right-0 h-1 bg-white/50" />
-      <div className="absolute top-[72%] left-0 right-0 h-1.5 bg-white/60" />
-      <div className="absolute left-[25%] top-0 bottom-0 w-3 bg-white/90 shadow-sm" />
-      <div className="absolute left-[55%] top-0 bottom-0 w-2 bg-white/75" />
-      <div className="absolute left-[75%] top-0 bottom-0 w-1 bg-white/50" />
-      {[[8,8,15,12],[30,12,18,14],[58,6,18,14],[10,42,14,18],[38,36,20,15],[65,40,17,14],[8,65,20,16],[42,60,18,14],[70,63,14,13]].map(([x,y,w,h],i) => (
-        <div key={i} className="absolute rounded bg-[#d4e3f0]/60 border border-[#c0d8ea]/40"
-          style={{ left:`${x}%`, top:`${y}%`, width:`${w}%`, height:`${h}%` }} />
-      ))}
-      {/* User dot */}
-      <div className="absolute" style={{ left:'50%', top:'50%', transform:'translate(-50%,-50%)' }}>
-        <div className="w-5 h-5 rounded-full bg-[#1E5BB8] border-3 border-white shadow-xl ring-4 ring-[#1E5BB8]/20" />
-        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-[#1E5BB8] text-white text-[9px] px-1.5 py-0.5 rounded-full whitespace-nowrap font-bold shadow">Vous</div>
-      </div>
-      {/* Pro markers */}
-      {pros.map(pro => {
-        const lx = nx(pro.lng, LNG_MIN, LNG_MAX);
-        const ly = 100 - nx(pro.lat, LAT_MIN, LAT_MAX);
-        const isSel = selectedPro?.id === pro.id;
-        return (
-          <motion.button key={pro.id}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: isSel ? 1.25 : 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 400, delay: pro.id * 0.04 }}
-            onClick={() => onSelectPro(pro)}
-            style={{ left:`${lx}%`, top:`${ly}%`, position:'absolute', transform:'translate(-50%,-100%)' }}
-            className="group z-10">
-            <div className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${pro.avatarColor} border-[3px] ${
-                isSel ? 'border-[#E30613] shadow-2xl ring-4 ring-[#E30613]/20' : 'border-white shadow-lg group-hover:border-[#1E5BB8]/50'
-              } flex items-center justify-center text-white font-black text-xs group-hover:scale-110 transition-all`}>
-                {pro.avatar}
-              </div>
-              <div className={`mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold shadow whitespace-nowrap ${
-                pro.available ? 'bg-white text-gray-800 border border-gray-200' : 'bg-gray-300 text-gray-500'
-              }`}>
-                {pro.name.split(' ')[0]}
-              </div>
-              {pro.available && <span className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />}
-              <div className={`w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent -mt-px ${
-                pro.available ? 'border-t-white' : 'border-t-gray-300'
-              } drop-shadow-sm`} />
-            </div>
-          </motion.button>
-        );
-      })}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-[#243B82]/85 backdrop-blur-sm text-white text-xs px-4 py-2 rounded-full font-medium shadow-lg border border-white/10">
-        🗺️ Remplacer par Google Maps — voir guide dans MapPage.tsx
-      </div>
-    </div>
+    <AdvancedMarker
+      position={{ lat: pro.lat, lng: pro.lng }}
+      onClick={onClick}
+      zIndex={isSelected ? 100 : 1}
+    >
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: isSelected ? 1.2 : 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        className="flex flex-col items-center cursor-pointer group"
+      >
+        {/* Bubble */}
+        <div className={`
+          relative w-12 h-12 rounded-full bg-gradient-to-br ${pro.avatarColor}
+          flex items-center justify-center text-white font-black text-sm
+          border-[3px] shadow-xl transition-all duration-200
+          ${isSelected
+            ? 'border-[#E30613] shadow-red-400/40 ring-4 ring-[#E30613]/20'
+            : 'border-white group-hover:border-[#1E5BB8]/60 group-hover:shadow-blue-400/30'}
+        `}>
+          <span className="text-lg">{pro.avatar}</span>
+          {pro.available && (
+            <span className="absolute top-0.5 right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+          )}
+        </div>
+
+        {/* Label */}
+        <div className={`
+          mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-md whitespace-nowrap
+          transition-all duration-200
+          ${isSelected
+            ? 'bg-[#1E5BB8] text-white'
+            : pro.available
+              ? 'bg-white text-gray-800 border border-gray-200 group-hover:bg-blue-50 group-hover:border-blue-200'
+              : 'bg-gray-200 text-gray-500'}
+        `}>
+          {pro.name.split(' ')[0]} · {pro.price} MAD
+        </div>
+
+        {/* Pointer triangle */}
+        <div className={`w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px]
+          border-l-transparent border-r-transparent -mt-px drop-shadow-sm
+          ${isSelected ? 'border-t-[#1E5BB8]' : pro.available ? 'border-t-white' : 'border-t-gray-200'}
+        `} />
+      </motion.div>
+    </AdvancedMarker>
   );
 }
 
-/* ─── Main ──────────────────────────────────────────────────────────────────── */
-export function MapPage({ filteredPros, filters, updateFilter, onSelectPro }: MapPageProps) {
-  const [selectedPro, setSelectedPro]   = useState<Pro | null>(null);
-  const [catOpen, setCatOpen]           = useState(false);
-  const [filterOpen, setFilterOpen]     = useState(false);
-  const [swipeOpen, setSwipeOpen]       = useState(false);
-  // null = show all, array = show only liked after swipe
-  const [likedFilter, setLikedFilter]   = useState<number[] | null>(null);
+/* ─── User Location Marker ──────────────────────────────────────────────────── */
+function UserMarker() {
+  return (
+    <AdvancedMarker position={CASABLANCA_CENTER} zIndex={200}>
+      <div className="flex flex-col items-center">
+        <div className="relative">
+          <div className="w-5 h-5 rounded-full bg-[#1E5BB8] border-[3px] border-white shadow-xl" />
+          <div className="absolute inset-0 rounded-full bg-[#1E5BB8]/30 animate-ping" />
+        </div>
+        <div className="mt-1 bg-[#1E5BB8] text-white text-[9px] px-2 py-0.5 rounded-full font-bold shadow whitespace-nowrap">
+          Vous
+        </div>
+      </div>
+    </AdvancedMarker>
+  );
+}
 
-  const currentCat  = SERVICE_CATEGORIES.find(c => c.label === filters.category) || SERVICE_CATEGORIES[0];
-  // Pros shown on map — either filtered by swipe likes or all
+/* ─── Google Map Inner Component (needs useMap hook) ────────────────────────── */
+function MapContent({ pros, selectedPro, onSelectPro }: {
+  pros: Pro[]; selectedPro: Pro | null; onSelectPro: (p: Pro) => void;
+}) {
+  const map = useMap();
+
+  // Pan to selected pro
+  useEffect(() => {
+    if (selectedPro && map) {
+      map.panTo({ lat: selectedPro.lat, lng: selectedPro.lng });
+    }
+  }, [selectedPro, map]);
+
+  return (
+    <>
+      <UserMarker />
+      {pros.map(pro => (
+        <ProMarker
+          key={pro.id}
+          pro={pro}
+          isSelected={selectedPro?.id === pro.id}
+          onClick={() => onSelectPro(pro)}
+        />
+      ))}
+    </>
+  );
+}
+
+/* ─── Main MapPage ──────────────────────────────────────────────────────────── */
+export function MapPage({ filteredPros, filters, updateFilter, onSelectPro }: MapPageProps) {
+  const [selectedPro, setSelectedPro] = useState<Pro | null>(null);
+  const [catOpen, setCatOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [swipeOpen, setSwipeOpen] = useState(false);
+  const [likedFilter, setLikedFilter] = useState<number[] | null>(null);
+
+  const currentCat = SERVICE_CATEGORIES.find(c => c.label === filters.category) || SERVICE_CATEGORIES[0];
   const mapPros = likedFilter !== null
     ? filteredPros.filter(p => likedFilter.includes(p.id))
     : filteredPros;
 
   const handleMapSelect = (pro: Pro) => setSelectedPro(prev => prev?.id === pro.id ? null : pro);
-
-  const handleSwipeFinished = (likedIds: number[]) => {
-    if (likedIds.length > 0) setLikedFilter(likedIds);
-  };
-
-  const handleResetFilter = () => {
-    setLikedFilter(null);
-    setSelectedPro(null);
-  };
+  const handleSwipeFinished = (likedIds: number[]) => { if (likedIds.length > 0) setLikedFilter(likedIds); };
+  const handleResetFilter = () => { setLikedFilter(null); setSelectedPro(null); };
 
   return (
-    <div className="flex h-full overflow-hidden relative">
+    // ─── APIProvider wraps the whole page ─────────────────────────────────────
+    // If you already wrap your app in APIProvider, remove this wrapper here.
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <div className="flex h-full overflow-hidden relative">
 
-      {/* ── SWIPE OVERLAY ───────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {swipeOpen && (
-          <MapSwipeOverlay
-            pros={filteredPros}
-            onClose={() => setSwipeOpen(false)}
-            onViewPro={pro => { onSelectPro(pro); setSwipeOpen(false); }}
-            onSwipeFinished={handleSwipeFinished}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── LEFT PANEL ─────────────────────────────────────────────────── */}
-      <div className="hidden lg:flex flex-col w-80 bg-white border-r border-gray-100 shadow-lg z-10 shrink-0">
-
-        {/* Filter header */}
-        <div className="px-4 py-4 border-b border-gray-100 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-black text-gray-900 flex items-center gap-2 text-sm">
-              <SlidersHorizontal size={15} className="text-[#1E5BB8]" /> Filtres
-            </h3>
-            <span className="text-xs font-black bg-[#1E5BB8] text-white w-6 h-6 rounded-full flex items-center justify-center">
-              {mapPros.length}
-            </span>
-          </div>
-
-          {/* Category dropdown */}
-          <div className="relative">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Catégorie</p>
-            <button onClick={() => setCatOpen(!catOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-[#1E5BB8]/50 transition-all">
-              <span className="flex items-center gap-2">{currentCat.emoji} {currentCat.label}</span>
-              <ChevronDown size={13} className={`transition-transform ${catOpen ? 'rotate-180' : ''}`} />
-            </button>
-            <AnimatePresence>
-              {catOpen && (
-                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-                  className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-30 max-h-60 overflow-y-auto py-1">
-                  {SERVICE_CATEGORIES.map(c => (
-                    <button key={c.label} onClick={() => { updateFilter('category', c.label as ServiceCategory); setCatOpen(false); }}
-                      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                        filters.category === c.label ? 'bg-blue-50 text-[#1E5BB8] font-bold' : 'text-gray-700 hover:bg-gray-50'
-                      }`}>
-                      <span className="flex items-center gap-2.5">{c.emoji} {c.label}</span>
-                      {filters.category === c.label && <Check size={13} />}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Distance */}
-          <div>
-            <div className="flex justify-between text-[10px] font-bold mb-1.5">
-              <span className="text-gray-400 uppercase tracking-widest">Rayon</span>
-              <span className="text-[#1E5BB8]">{filters.maxDistance} km</span>
-            </div>
-            <input type="range" min={1} max={50} value={filters.maxDistance}
-              onChange={e => updateFilter('maxDistance', +e.target.value)}
-              className="w-full accent-[#1E5BB8]" />
-          </div>
-
-          {/* Swipe button */}
-          <button onClick={() => setSwipeOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#1E5BB8] to-[#243B82] text-white font-bold rounded-xl text-sm shadow-md shadow-blue-900/20 hover:shadow-lg transition-all">
-            <Zap size={15} /> Mode Swipe
-          </button>
-        </div>
-
-        {/* Swipe filter indicator */}
-        {likedFilter !== null && (
-          <div className="mx-3 mt-3 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
-            <Heart size={13} className="text-green-600 fill-green-600 shrink-0" />
-            <p className="text-xs text-green-700 font-semibold flex-1">
-              {likedFilter.length} prestataire{likedFilter.length > 1 ? 's' : ''} sélectionné{likedFilter.length > 1 ? 's' : ''} par swipe
-            </p>
-            <button onClick={handleResetFilter} className="text-green-600 hover:text-green-800 transition-colors" title="Réinitialiser">
-              <RefreshCw size={13} />
-            </button>
-          </div>
-        )}
-
-        {/* Pro list */}
-        <div className="border-b border-gray-50 px-4 py-2 mt-2">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {likedFilter !== null ? 'Prestataires aimés' : 'Prestataires à proximité'} ({mapPros.length})
-          </p>
-        </div>
-        <div className="flex-1 overflow-y-auto divide-y divide-gray-50 min-h-0">
-          {mapPros.map(pro => (
-            <button key={pro.id} onClick={() => handleMapSelect(pro)}
-              className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/40 transition-colors text-left ${
-                selectedPro?.id === pro.id ? 'bg-blue-50 border-r-2 border-[#1E5BB8]' : ''
-              }`}>
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${pro.avatarColor} flex items-center justify-center text-white font-bold text-sm shadow shrink-0`}>
-                {pro.avatar}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{pro.name}</p>
-                  {pro.verified && <BadgeCheck size={11} className="text-blue-500 shrink-0" />}
-                </div>
-                <p className="text-xs text-gray-400 truncate">{pro.specialty}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs font-black text-[#1E5BB8]">{pro.price} MAD</p>
-                <p className="text-[10px] text-gray-400">{pro.distance} km</p>
-              </div>
-              <div className={`w-2 h-2 rounded-full shrink-0 ${pro.available ? 'bg-green-500' : 'bg-gray-300'}`} />
-            </button>
-          ))}
-          {mapPros.length === 0 && likedFilter !== null && (
-            <div className="text-center py-8 px-4">
-              <p className="text-gray-400 text-sm">Aucun prestataire aimé</p>
-              <button onClick={handleResetFilter} className="mt-2 text-xs text-[#1E5BB8] font-bold hover:underline">Voir tous</button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── MAP AREA ─────────────────────────────────────────────────────── */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Replace with RealGoogleMap from the guide in this file */}
-        <SimulatedMap pros={mapPros} selectedPro={selectedPro} onSelectPro={handleMapSelect} />
-
-        {/* Mobile top bar */}
-        <div className="lg:hidden absolute top-3 left-3 right-3 z-20 flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl px-3 py-2 shadow-md">
-            <Search size={14} className="text-gray-400" />
-            <span className="text-sm text-gray-500 font-medium">Casablanca, Maroc</span>
-          </div>
-          <button onClick={() => setSwipeOpen(true)}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-[#1E5BB8] to-[#243B82] text-white font-bold px-3 py-2 rounded-xl shadow-md text-xs">
-            <Zap size={14} /> Swipe
-          </button>
-          <button onClick={() => setFilterOpen(!filterOpen)}
-            className={`p-2.5 rounded-xl border shadow-md transition-all ${
-              filterOpen ? 'bg-[#1E5BB8] text-white border-[#1E5BB8]' : 'bg-white/95 text-gray-600 border-gray-200'
-            }`}>
-            <Filter size={16} />
-          </button>
-        </div>
-
-        {/* Swipe filter banner on mobile */}
-        {likedFilter !== null && (
-          <div className="lg:hidden absolute top-16 left-3 right-3 z-20 flex items-center gap-2 bg-green-50/95 backdrop-blur-sm border border-green-200 rounded-xl px-3 py-2 shadow-md">
-            <Heart size={13} className="text-green-600 fill-green-600" />
-            <p className="text-xs text-green-700 font-semibold flex-1">{likedFilter.length} aimé{likedFilter.length > 1 ? 's' : ''} sur la carte</p>
-            <button onClick={handleResetFilter} className="text-green-600 hover:text-green-800">
-              <RefreshCw size={13} />
-            </button>
-          </div>
-        )}
-
-        {/* Mobile filter panel */}
+        {/* ── SWIPE OVERLAY ─────────────────────────────────────────────── */}
         <AnimatePresence>
-          {filterOpen && (
-            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="lg:hidden absolute top-16 left-3 right-3 z-20 bg-white/98 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-4 space-y-3">
-              <div className="relative">
-                <button onClick={() => setCatOpen(!catOpen)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700">
-                  <span className="flex items-center gap-2">{currentCat.emoji} {currentCat.label}</span>
-                  <ChevronDown size={13} className={`transition-transform ${catOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {catOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-30 max-h-52 overflow-y-auto py-1">
-                      {SERVICE_CATEGORIES.map(c => (
-                        <button key={c.label} onClick={() => { updateFilter('category', c.label as ServiceCategory); setCatOpen(false); }}
-                          className={`w-full flex items-center justify-between px-4 py-2.5 text-sm ${
-                            filters.category === c.label ? 'bg-blue-50 text-[#1E5BB8] font-bold' : 'text-gray-700 hover:bg-gray-50'
-                          }`}>
-                          <span className="flex items-center gap-2">{c.emoji} {c.label}</span>
-                          {filters.category === c.label && <Check size={13} />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1.5">
-                  <span className="text-gray-400">Rayon</span>
-                  <span className="text-[#1E5BB8]">{filters.maxDistance} km</span>
-                </div>
-                <input type="range" min={1} max={50} value={filters.maxDistance}
-                  onChange={e => updateFilter('maxDistance', +e.target.value)}
-                  className="w-full accent-[#1E5BB8]" />
-              </div>
-            </motion.div>
+          {swipeOpen && (
+            <MapSwipeOverlay
+              pros={filteredPros}
+              onClose={() => setSwipeOpen(false)}
+              onViewPro={pro => { onSelectPro(pro); setSwipeOpen(false); }}
+              onSwipeFinished={handleSwipeFinished}
+            />
           )}
         </AnimatePresence>
 
-        {/* Legend */}
-        <div className="absolute top-3 right-3 hidden lg:flex bg-white/90 backdrop-blur-sm rounded-xl shadow px-3 py-2 border border-gray-100 text-xs gap-3 z-20">
-          {likedFilter !== null && (
-            <span className="flex items-center gap-1 text-green-600 font-bold">
-              <Heart size={11} className="fill-green-500 text-green-500" /> Filtrés par swipe
-            </span>
-          )}
-          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full" /> Disponible</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-300 rounded-full" /> Indisponible</span>
-        </div>
+        {/* ── LEFT PANEL ────────────────────────────────────────────────── */}
+        <div className="hidden lg:flex flex-col w-80 bg-white border-r border-gray-100 shadow-lg z-10 shrink-0">
+          <div className="px-4 py-4 border-b border-gray-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-gray-900 flex items-center gap-2 text-sm">
+                <SlidersHorizontal size={15} className="text-[#1E5BB8]" /> Filtres
+              </h3>
+              <span className="text-xs font-black bg-[#1E5BB8] text-white w-6 h-6 rounded-full flex items-center justify-center">
+                {mapPros.length}
+              </span>
+            </div>
 
-        {/* Selected pro panel */}
-        <AnimatePresence>
-          {selectedPro && (
-            <motion.div
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-              className="absolute bottom-0 left-0 right-0 lg:left-auto lg:right-6 lg:bottom-6 lg:w-96 bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl border-t border-gray-100 lg:border p-5 z-30"
-            >
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4 lg:hidden" />
-              <div className="flex items-start gap-4 mb-4">
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${selectedPro.avatarColor} flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0`}>
-                  {selectedPro.avatar}
+            {/* Category dropdown */}
+            <div className="relative">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Catégorie</p>
+              <button onClick={() => setCatOpen(!catOpen)}
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-[#1E5BB8]/50 transition-all">
+                <span className="flex items-center gap-2">{currentCat.emoji} {currentCat.label}</span>
+                <ChevronDown size={13} className={`transition-transform ${catOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {catOpen && (
+                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                    className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-30 max-h-60 overflow-y-auto py-1">
+                    {SERVICE_CATEGORIES.map(c => (
+                      <button key={c.label} onClick={() => { updateFilter('category', c.label as ServiceCategory); setCatOpen(false); }}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                          filters.category === c.label ? 'bg-blue-50 text-[#1E5BB8] font-bold' : 'text-gray-700 hover:bg-gray-50'
+                        }`}>
+                        <span className="flex items-center gap-2.5">{c.emoji} {c.label}</span>
+                        {filters.category === c.label && <Check size={13} />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Distance */}
+            <div>
+              <div className="flex justify-between text-[10px] font-bold mb-1.5">
+                <span className="text-gray-400 uppercase tracking-widest">Rayon</span>
+                <span className="text-[#1E5BB8]">{filters.maxDistance} km</span>
+              </div>
+              <input type="range" min={1} max={50} value={filters.maxDistance}
+                onChange={e => updateFilter('maxDistance', +e.target.value)}
+                className="w-full accent-[#1E5BB8]" />
+            </div>
+
+            {/* Swipe mode button */}
+            <button onClick={() => setSwipeOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#1E5BB8] to-[#243B82] text-white font-bold rounded-xl text-sm shadow-md shadow-blue-900/20 hover:shadow-lg transition-all">
+              <Zap size={15} /> Mode Swipe
+            </button>
+          </div>
+
+          {/* Swipe filter indicator */}
+          {likedFilter !== null && (
+            <div className="mx-3 mt-3 flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+              <Heart size={13} className="text-green-600 fill-green-600 shrink-0" />
+              <p className="text-xs text-green-700 font-semibold flex-1">
+                {likedFilter.length} prestataire{likedFilter.length > 1 ? 's' : ''} sélectionné{likedFilter.length > 1 ? 's' : ''} par swipe
+              </p>
+              <button onClick={handleResetFilter} className="text-green-600 hover:text-green-800 transition-colors">
+                <RefreshCw size={13} />
+              </button>
+            </div>
+          )}
+
+          {/* Pro list */}
+          <div className="border-b border-gray-50 px-4 py-2 mt-2">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              {likedFilter !== null ? 'Prestataires aimés' : 'Prestataires à proximité'} ({mapPros.length})
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-50 min-h-0">
+            {mapPros.map(pro => (
+              <button key={pro.id} onClick={() => handleMapSelect(pro)}
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/40 transition-colors text-left ${
+                  selectedPro?.id === pro.id ? 'bg-blue-50 border-r-2 border-[#1E5BB8]' : ''
+                }`}>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${pro.avatarColor} flex items-center justify-center text-white font-bold text-sm shadow shrink-0`}>
+                  {pro.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-black text-gray-900 text-lg">{selectedPro.name}</p>
-                    {selectedPro.verified && <BadgeCheck size={16} className="text-blue-500" />}
+                  <div className="flex items-center gap-1">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{pro.name}</p>
+                    {pro.verified && <BadgeCheck size={11} className="text-blue-500 shrink-0" />}
                   </div>
-                  <p className="text-gray-500 text-sm">{selectedPro.specialty}</p>
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
-                      <Star size={13} className="fill-amber-400 text-amber-400" /> {selectedPro.rating} ({selectedPro.reviews})
-                    </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1"><MapPin size={10} />{selectedPro.distance} km</span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{selectedPro.responseTime}</span>
-                  </div>
+                  <p className="text-xs text-gray-400 truncate">{pro.specialty}</p>
                 </div>
-                <button onClick={() => setSelectedPro(null)} className="text-gray-400 hover:text-gray-600 p-1 shrink-0"><X size={18} /></button>
-              </div>
-              <div className="flex gap-2 mb-3">
-                <span className={`flex-1 text-center text-sm font-bold py-2 rounded-xl ${
-                  selectedPro.available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                }`}>{selectedPro.available ? '● Disponible' : '○ Indisponible'}</span>
-                <span className="font-black text-[#1E5BB8] bg-blue-50 px-5 py-2 rounded-xl border border-blue-100 text-sm">{selectedPro.price} MAD/h</span>
-              </div>
-              <button onClick={() => onSelectPro(selectedPro)}
-                className="w-full bg-[#1E5BB8] hover:bg-[#243B82] text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md shadow-blue-900/20">
-                Voir le profil complet <ChevronRight size={15} />
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-black text-[#1E5BB8]">{pro.price} MAD</p>
+                  <p className="text-[10px] text-gray-400">{pro.distance} km</p>
+                </div>
+                <div className={`w-2 h-2 rounded-full shrink-0 ${pro.available ? 'bg-green-500' : 'bg-gray-300'}`} />
               </button>
-            </motion.div>
+            ))}
+            {mapPros.length === 0 && likedFilter !== null && (
+              <div className="text-center py-8 px-4">
+                <p className="text-gray-400 text-sm">Aucun prestataire aimé</p>
+                <button onClick={handleResetFilter} className="mt-2 text-xs text-[#1E5BB8] font-bold hover:underline">Voir tous</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── MAP AREA ──────────────────────────────────────────────────── */}
+        <div className="flex-1 relative overflow-hidden">
+
+          {/* ── REAL GOOGLE MAP ────────────────────────────────────────── */}
+          <Map
+            mapId="casablanca-pro-map"           // Create a Map ID in Google Cloud Console for custom styles
+            defaultCenter={CASABLANCA_CENTER}
+            defaultZoom={13}
+            gestureHandling="greedy"
+            disableDefaultUI={false}
+            mapTypeControl={false}
+            streetViewControl={false}
+            fullscreenControl={false}
+            zoomControlOptions={{ position: 9 }} // RIGHT_CENTER
+            styles={MAP_STYLES}                  // Custom styles (only works without mapId — remove one or the other)
+            className="w-full h-full"
+          >
+            <MapContent
+              pros={mapPros}
+              selectedPro={selectedPro}
+              onSelectPro={handleMapSelect}
+            />
+          </Map>
+
+          {/* Mobile top bar */}
+          <div className="lg:hidden absolute top-3 left-3 right-3 z-20 flex gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl px-3 py-2 shadow-md">
+              <Search size={14} className="text-gray-400" />
+              <span className="text-sm text-gray-500 font-medium">Casablanca, Maroc</span>
+            </div>
+            <button onClick={() => setSwipeOpen(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-[#1E5BB8] to-[#243B82] text-white font-bold px-3 py-2 rounded-xl shadow-md text-xs">
+              <Zap size={14} /> Swipe
+            </button>
+            <button onClick={() => setFilterOpen(!filterOpen)}
+              className={`p-2.5 rounded-xl border shadow-md transition-all ${
+                filterOpen ? 'bg-[#1E5BB8] text-white border-[#1E5BB8]' : 'bg-white/95 text-gray-600 border-gray-200'
+              }`}>
+              <Filter size={16} />
+            </button>
+          </div>
+
+          {/* Swipe filter banner on mobile */}
+          {likedFilter !== null && (
+            <div className="lg:hidden absolute top-16 left-3 right-3 z-20 flex items-center gap-2 bg-green-50/95 backdrop-blur-sm border border-green-200 rounded-xl px-3 py-2 shadow-md">
+              <Heart size={13} className="text-green-600 fill-green-600" />
+              <p className="text-xs text-green-700 font-semibold flex-1">{likedFilter.length} aimé{likedFilter.length > 1 ? 's' : ''} sur la carte</p>
+              <button onClick={handleResetFilter} className="text-green-600 hover:text-green-800">
+                <RefreshCw size={13} />
+              </button>
+            </div>
           )}
-        </AnimatePresence>
+
+          {/* Mobile filter panel */}
+          <AnimatePresence>
+            {filterOpen && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="lg:hidden absolute top-16 left-3 right-3 z-20 bg-white/98 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-4 space-y-3">
+                <div className="relative">
+                  <button onClick={() => setCatOpen(!catOpen)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700">
+                    <span className="flex items-center gap-2">{currentCat.emoji} {currentCat.label}</span>
+                    <ChevronDown size={13} className={`transition-transform ${catOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {catOpen && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-30 max-h-52 overflow-y-auto py-1">
+                        {SERVICE_CATEGORIES.map(c => (
+                          <button key={c.label} onClick={() => { updateFilter('category', c.label as ServiceCategory); setCatOpen(false); }}
+                            className={`w-full flex items-center justify-between px-4 py-2.5 text-sm ${
+                              filters.category === c.label ? 'bg-blue-50 text-[#1E5BB8] font-bold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}>
+                            <span className="flex items-center gap-2">{c.emoji} {c.label}</span>
+                            {filters.category === c.label && <Check size={13} />}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-1.5">
+                    <span className="text-gray-400">Rayon</span>
+                    <span className="text-[#1E5BB8]">{filters.maxDistance} km</span>
+                  </div>
+                  <input type="range" min={1} max={50} value={filters.maxDistance}
+                    onChange={e => updateFilter('maxDistance', +e.target.value)}
+                    className="w-full accent-[#1E5BB8]" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Legend */}
+          <div className="absolute top-3 right-3 hidden lg:flex bg-white/90 backdrop-blur-sm rounded-xl shadow px-3 py-2 border border-gray-100 text-xs gap-3 z-20">
+            {likedFilter !== null && (
+              <span className="flex items-center gap-1 text-green-600 font-bold">
+                <Heart size={11} className="fill-green-500 text-green-500" /> Filtrés par swipe
+              </span>
+            )}
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full" /> Disponible</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-300 rounded-full" /> Indisponible</span>
+          </div>
+
+          {/* Selected pro panel */}
+          <AnimatePresence>
+            {selectedPro && (
+              <motion.div
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+                className="absolute bottom-0 left-0 right-0 lg:left-auto lg:right-6 lg:bottom-6 lg:w-96 bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl border-t border-gray-100 lg:border p-5 z-30"
+              >
+                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4 lg:hidden" />
+                <div className="flex items-start gap-4 mb-4">
+                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${selectedPro.avatarColor} flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0`}>
+                    {selectedPro.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-black text-gray-900 text-lg">{selectedPro.name}</p>
+                      {selectedPro.verified && <BadgeCheck size={16} className="text-blue-500" />}
+                    </div>
+                    <p className="text-gray-500 text-sm">{selectedPro.specialty}</p>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
+                        <Star size={13} className="fill-amber-400 text-amber-400" /> {selectedPro.rating} ({selectedPro.reviews})
+                      </span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1"><MapPin size={10} />{selectedPro.distance} km</span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{selectedPro.responseTime}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedPro(null)} className="text-gray-400 hover:text-gray-600 p-1 shrink-0"><X size={18} /></button>
+                </div>
+                <div className="flex gap-2 mb-3">
+                  <span className={`flex-1 text-center text-sm font-bold py-2 rounded-xl ${
+                    selectedPro.available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>{selectedPro.available ? '● Disponible' : '○ Indisponible'}</span>
+                  <span className="font-black text-[#1E5BB8] bg-blue-50 px-5 py-2 rounded-xl border border-blue-100 text-sm">{selectedPro.price} MAD/h</span>
+                </div>
+                <button onClick={() => onSelectPro(selectedPro)}
+                  className="w-full bg-[#1E5BB8] hover:bg-[#243B82] text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md shadow-blue-900/20">
+                  Voir le profil complet <ChevronRight size={15} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
       </div>
-    </div>
+    </APIProvider>
   );
 }
