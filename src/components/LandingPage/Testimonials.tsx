@@ -25,11 +25,11 @@ export function Testimonials() {
   ];
 
   return (
-    <section className="py-20 px-6 bg-gradient-to-br from-blue-50 to-orange-50">
+    <section className="py-20 px-6 bg-gradient-to-br from-[#F2F3F5] via-[#E5E7EB] to-[#1E5BB8]">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16 reveal">
           <motion.h2 
-            className="text-4xl font-bold mb-4"
+            className="text-4xl font-bold mb-4 text-[#243B82]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -47,18 +47,18 @@ export function Testimonials() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 stagger-children">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((test, i) => (
             <motion.div
               key={i}
-              className="card-hover bg-white rounded-2xl p-8 shadow-lg relative"
+              className="card-hover bg-white rounded-2xl p-8 shadow-lg relative border border-[#E5E7EB]"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
             >
               <motion.div 
-                className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-blue-600 to-orange-500 rounded-full flex items-center justify-center shadow-lg"
+                className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-[#1E5BB8] via-[#E30613] to-[#243B82] rounded-full flex items-center justify-center shadow-lg"
                 initial={{ scale: 0, rotate: -180 }}
                 whileInView={{ scale: 1, rotate: 0 }}
                 viewport={{ once: true }}
@@ -76,7 +76,7 @@ export function Testimonials() {
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.05 + 0.3 }}
                   >
-                    <Star className="text-yellow-400 fill-yellow-400" size={20} />
+                    <Star className="text-[#FACC15] fill-[#FACC15]" size={20} />
                   </motion.div>
                 ))}
               </div>
@@ -84,7 +84,7 @@ export function Testimonials() {
               <p className="text-gray-700 mb-6 leading-relaxed italic">"{test.text}"</p>
               
               <div className="border-t pt-4">
-                <p className="font-semibold text-lg">{test.name}</p>
+                <p className="font-semibold text-lg text-[#243B82]">{test.name}</p>
                 <p className="text-sm text-gray-500">{test.role}</p>
               </div>
             </motion.div>

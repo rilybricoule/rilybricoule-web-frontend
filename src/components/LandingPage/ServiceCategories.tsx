@@ -8,52 +8,52 @@ export function ServiceCategories() {
       icon: Hammer, 
       title: 'Réparations', 
       desc: 'Petits travaux de réparation', 
-      color: 'from-blue-600 to-blue-700',
-      iconColor: 'text-blue-600'
+      color: 'from-[#1E5BB8] to-[#243B82]', // Bleu principal → Bleu foncé
+      iconColor: 'text-[#1E5BB8]'
     },
     { 
       icon: Paintbrush, 
       title: 'Peinture', 
       desc: 'Travaux de peinture intérieure', 
-      color: 'from-orange-500 to-orange-600',
-      iconColor: 'text-orange-500'
+      color: 'from-[#E30613] to-[#1E5BB8]', // Rouge CTA → Bleu principal
+      iconColor: 'text-[#E30613]'
     },
     { 
       icon: Zap, 
       title: 'Électricité', 
       desc: 'Installations électriques', 
-      color: 'from-cyan-500 to-blue-600',
-      iconColor: 'text-cyan-600'
+      color: 'from-[#1E5BB8] to-[#E30613]', // Bleu principal → Rouge CTA
+      iconColor: 'text-[#243B82]'
     },
     { 
       icon: Droplet, 
       title: 'Plomberie', 
       desc: 'Réparations et installations', 
-      color: 'from-blue-500 to-cyan-600',
-      iconColor: 'text-blue-500'
+      color: 'from-[#243B82] to-[#1E5BB8]', // Bleu foncé → Bleu principal
+      iconColor: 'text-[#1E5BB8]'
     },
     { 
       icon: Wrench, 
       title: 'Montage', 
       desc: 'Assemblage de meubles', 
-      color: 'from-slate-600 to-slate-700',
-      iconColor: 'text-grey-600'
+      color: 'from-[#D1D5DB] to-[#6B7280]', // Neutre → Blanc pour douceur
+      iconColor: 'text-[#243B82]'
     },
     { 
       icon: Home, 
-      title: 'Encors plus', 
-      desc: 'Découvrer plus de service', 
-      color: 'from-orange-600 to-blue-600',
-      iconColor: 'text-orange-600'
+      title: 'Encore plus', 
+      desc: 'Découvrez plus de services', 
+      color: 'from-[#E30613] to-[#1E5BB8]', // Rouge CTA → Bleu principal
+      iconColor: 'text-[#E30613]'
     }
   ];
 
   return (
-    <section id="services" className="py-20 px-6 bg-grey-50">
+    <section id="services" className="py-20 px-6 bg-[#F2F3F5]">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16 reveal">
           <motion.h2 
-            className="text-4xl font-bold mb-4 text-gray-900"
+            className="text-4xl font-bold mb-4 text-[#243B82]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -71,11 +71,11 @@ export function ServiceCategories() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 stagger-children">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, i) => (
             <motion.div
               key={i}
-              className="card-hover bg-white rounded-2xl p-8 shadow-lg border-2 border-blue-50 hover:border-blue-100 cursor-pointer group transition-all duration-300"
+              className="card-hover bg-white rounded-2xl p-8 shadow-lg border-2 border-[#E5E7EB] hover:border-[#1E5BB8] cursor-pointer group transition-all duration-300"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -89,7 +89,7 @@ export function ServiceCategories() {
               >
                 <service.icon className="text-white" size={32} />
               </motion.div>
-              <h3 className="text-2xl font-semibold mb-3 text-gray-900">{service.title}</h3>
+              <h3 className="text-2xl font-semibold mb-3 text-[#243B82]">{service.title}</h3>
               <p className="text-gray-600 mb-4">{service.desc}</p>
               <motion.button 
                 className={`${service.iconColor} font-semibold hover:underline transition-all flex items-center gap-1`}

@@ -12,6 +12,7 @@ interface TopNavProps {
   onNavigate: (view: View) => void;
   unreadMessages: number;
   onCategoryFilter?: (cat: ServiceCategory) => void;
+  notificationBell?: React.ReactNode; // ← NEW
 }
 
 const SERVICE_MENU: { label: ServiceCategory; icon: React.ReactNode; color: string }[] = [
@@ -27,10 +28,10 @@ const SERVICE_MENU: { label: ServiceCategory; icon: React.ReactNode; color: stri
   { label: 'Sécurité',      icon: <Shield size={16} />,      color: 'text-red-500' },
 ];
 
-export function TopNav({ activeView, onNavigate, unreadMessages, onCategoryFilter }: TopNavProps) {
-  const [profileOpen, setProfileOpen]     = useState(false);
+export function TopNav({ activeView, onNavigate, unreadMessages, onCategoryFilter, notificationBell }: TopNavProps) {
+  const [profileOpen, setProfileOpen]       = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [servicesOpen, setServicesOpen]   = useState(false);
+  const [servicesOpen, setServicesOpen]     = useState(false);
   const servicesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -150,10 +151,14 @@ export function TopNav({ activeView, onNavigate, unreadMessages, onCategoryFilte
 
         {/* Right side */}
         <div className="flex items-center gap-2 shrink-0">
-          <button className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all">
-            <Bell size={18} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#E30613] rounded-full" />
-          </button>
+
+          {/* ── NOTIFICATION BELL: renders passed component, falls back to static bell ── */}
+          {notificationBell ?? (
+            <button className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all">
+              <Bell size={18} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#E30613] rounded-full" />
+            </button>
+          )}
 
           <div className="relative hidden md:block">
             <button
@@ -173,9 +178,9 @@ export function TopNav({ activeView, onNavigate, unreadMessages, onCategoryFilte
                   className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
                 >
                   {[
-                    { icon: <User size={14} />, label: 'Mon profil', view: 'profile-user' as View },
-                    { icon: <MessageSquare size={14} />, label: 'Messages', view: 'messages' as View },
-                    { icon: <HelpCircle size={14} />, label: 'Aide', view: 'faq' as View },
+                    { icon: <User size={14} />,        label: 'Mon profil', view: 'profile-user' as View },
+                    { icon: <MessageSquare size={14} />, label: 'Messages',  view: 'messages' as View },
+                    { icon: <HelpCircle size={14} />,  label: 'Aide',       view: 'faq' as View },
                   ].map(item => (
                     <button key={item.label}
                       onClick={() => { onNavigate(item.view); setProfileOpen(false); }}
@@ -207,12 +212,12 @@ export function TopNav({ activeView, onNavigate, unreadMessages, onCategoryFilte
             className="md:hidden border-t border-white/10 bg-[#243B82] overflow-hidden">
             <div className="px-4 py-3 space-y-1">
               {[
-                { view: 'explore' as View, label: 'Accueil',  icon: <Home size={16} /> },
-                { view: 'services' as View, label: 'Services', icon: <Grid3X3 size={16} /> },
-                { view: 'map' as View,     label: 'Carte',    icon: <Map size={16} /> },
-                { view: 'messages' as View, label: 'Messages', icon: <MessageSquare size={16} /> },
-                { view: 'faq' as View,     label: 'Aide',     icon: <HelpCircle size={16} /> },
-                { view: 'demandes' as View, label: 'Demandes', icon: <FileText size={16} /> },
+                { view: 'explore'  as View, label: 'Accueil',      icon: <Home size={16} /> },
+                { view: 'services' as View, label: 'Services',     icon: <Grid3X3 size={16} /> },
+                { view: 'map'      as View, label: 'Carte',        icon: <Map size={16} /> },
+                { view: 'messages' as View, label: 'Messages',     icon: <MessageSquare size={16} /> },
+                { view: 'faq'      as View, label: 'Aide',         icon: <HelpCircle size={16} /> },
+                { view: 'demandes' as View, label: 'Mes demandes', icon: <FileText size={16} /> },
               ].map(item => (
                 <button key={item.view} onClick={() => { onNavigate(item.view); setMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${

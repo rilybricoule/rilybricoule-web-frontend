@@ -39,11 +39,11 @@ export function FeaturedProfessionals() {
   ];
 
   return (
-    <section id="artisans" className="py-20 px-6 bg-white">
+    <section id="artisans" className="py-20 px-6 bg-[#F2F3F5]">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16 reveal">
           <motion.h2 
-            className="text-4xl font-bold mb-4"
+            className="text-4xl font-bold mb-4 text-[#243B82]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -61,11 +61,11 @@ export function FeaturedProfessionals() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 stagger-children">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {professionals.map((pro, i) => (
             <motion.div
               key={i}
-              className="card-hover bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100"
+              className="card-hover bg-white rounded-2xl overflow-hidden shadow-lg border border-[#E5E7EB]"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -81,14 +81,14 @@ export function FeaturedProfessionals() {
                   className="parallax-img w-full h-full object-cover" 
                 />
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
-                  <Star className="text-yellow-400 fill-yellow-400" size={16} />
-                  <span className="font-semibold text-sm">{pro.rating}</span>
+                  <Star className="text-[#E30613] fill-[#E30613]" size={16} />
+                  <span className="font-semibold text-sm text-[#243B82]">{pro.rating}</span>
                 </div>
               </motion.div>
               
               <div className="p-6">
-                <h3 className="text-xl font-semibold mb-1">{pro.name}</h3>
-                <p className="text-blue-600 mb-2">{pro.role}</p>
+                <h3 className="text-xl font-semibold mb-1 text-[#243B82]">{pro.name}</h3>
+                <p className="text-[#1E5BB8] mb-2">{pro.role}</p>
                 <div className="flex items-center text-sm text-gray-500 mb-4">
                   <MapPin size={14} className="mr-1" />
                   {pro.location}
@@ -98,7 +98,7 @@ export function FeaturedProfessionals() {
                     {pro.reviews} avis
                   </div>
                   <motion.button 
-                    className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+                    className="text-[#1E5BB8] font-semibold hover:text-[#E30613] transition-colors"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >

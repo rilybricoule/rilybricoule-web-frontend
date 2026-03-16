@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, ChevronLeft, Phone, MoreVertical, CheckCheck,
   Search, Pin, Trash2, Flag, X, Volume2, VolumeX,
-  Calendar, MessageSquare, Circle,
+  Calendar, MessageSquare, Lock, CheckCircle2,
 } from 'lucide-react';
 import type { Pro, Conversation } from '../types';
 import { PROS } from '../data/mockdata';
@@ -13,13 +13,17 @@ interface MessagesPageProps {
   onSendMessage: (proId: number, text: string) => void;
   onSelectPro: (pro: Pro) => void;
   onBook: (pro: Pro) => void;
+  /** IDs of pros with a confirmed + paid booking */
+  activeBookingProIds?: number[];
+  /** IDs of pros whose service is completed (chat disabled) */
+  completedBookingProIds?: number[];
 }
 
 const QUICK_REPLIES = [
-  'Bonjour, êtes-vous disponible aujourd\'hui ?',
-  'Quel est votre délai d\'intervention ?',
-  'Pouvez-vous me donner un devis ?',
-  'À quelle heure pouvez-vous venir ?',
+  'Bonjour, à quelle heure arrivez-vous ?',
+  'Pouvez-vous confirmer l\'adresse ?',
+  'Avez-vous besoin d\'un accès particulier ?',
+  'Merci, je vous attends.',
 ];
 
 /* ── Context menu ─────────────────────────────────────────────────────────── */
@@ -57,8 +61,8 @@ function ContextMenu({ x, y, onClose, onPin, onDelete, onClear, onReport, isPinn
 }
 
 /* ── Contact list item ────────────────────────────────────────────────────── */
-function ConvItem({ conv, pro, isActive, onClick, onContextMenu }:
-  { conv: Conversation; pro: Pro; isActive: boolean; onClick: () => void; onContextMenu: (e: React.MouseEvent) => void }
+function ConvItem({ conv, pro, isActive, onClick, onContextMenu, isLocked, isCompleted }:
+  { conv: Conversation; pro: Pro; isActive: boolean; onClick: () => void; onContextMenu: (e: React.MouseEvent) => void; isLocked: boolean; isCompleted: boolean }
 ) {
   const lastMsg = conv.messages[conv.messages.length - 1];
   const unread = conv.messages.filter(m => m.senderId !== 'client' && !m.read).length;
@@ -66,25 +70,40 @@ function ConvItem({ conv, pro, isActive, onClick, onContextMenu }:
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
-      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/40 transition-colors relative text-left ${isActive ? 'bg-blue-50 border-r-2 border-[#1E5BB8]' : ''}`}
+      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/40 transition-colors relative text-left ${isActive ? 'bg-blue-50 border-r-2 border-[#1E5BB8]' : ''} ${isLocked ? 'opacity-50' : ''}`}
     >
       {conv.pinned && <Pin size={10} className="absolute top-2 right-3 text-[#1E5BB8]" />}
       <div className="relative shrink-0">
         <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${pro.avatarColor} flex items-center justify-center text-white font-bold text-sm shadow`}>
           {pro.avatar}
         </div>
-        <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${pro.available ? 'bg-green-500' : 'bg-gray-300'}`} />
+        {isCompleted ? (
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white bg-green-500 flex items-center justify-center">
+            <CheckCircle2 size={8} className="text-white" />
+          </div>
+        ) : (
+          <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${pro.available ? 'bg-green-500' : 'bg-gray-300'}`} />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <p className={`text-sm truncate ${unread > 0 ? 'font-black text-gray-900' : 'font-semibold text-gray-800'}`}>{pro.name}</p>
-          <p className={`text-[11px] shrink-0 ml-2 ${unread > 0 ? 'text-[#1E5BB8] font-bold' : 'text-gray-400'}`}>{lastMsg?.time || ''}</p>
+          <div className="flex items-center gap-1.5 ml-2 shrink-0">
+            {isLocked && <Lock size={10} className="text-gray-400" />}
+            {isCompleted && <span className="text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded-full">Terminé</span>}
+            <p className={`text-[11px] ${unread > 0 ? 'text-[#1E5BB8] font-bold' : 'text-gray-400'}`}>{lastMsg?.time || ''}</p>
+          </div>
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <p className={`text-xs truncate ${unread > 0 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
-            {lastMsg?.senderId === 'client' ? '✓ ' : ''}{lastMsg?.text || 'Démarrer la conversation'}
+            {isLocked
+              ? 'Réservez pour déverrouiller la messagerie'
+              : isCompleted
+                ? 'Mission terminée'
+                : lastMsg?.senderId === 'client' ? '✓ ' + (lastMsg?.text || '') : lastMsg?.text || 'Démarrer la conversation'
+            }
           </p>
-          {unread > 0 && (
+          {unread > 0 && !isLocked && (
             <div className="w-5 h-5 bg-[#1E5BB8] rounded-full flex items-center justify-center shrink-0 ml-2">
               <span className="text-white text-[9px] font-black">{unread}</span>
             </div>
@@ -96,8 +115,8 @@ function ConvItem({ conv, pro, isActive, onClick, onContextMenu }:
 }
 
 /* ── Chat view ─────────────────────────────────────────────────────────────── */
-function ChatView({ pro, conversation, onSend, onBack, onBook }: {
-  pro: Pro; conversation: Conversation; onSend: (t: string) => void; onBack: () => void; onBook: () => void;
+function ChatView({ pro, conversation, onSend, onBack, onBook, isCompleted }: {
+  pro: Pro; conversation: Conversation; onSend: (t: string) => void; onBack: () => void; onBook: () => void; isCompleted: boolean;
 }) {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -108,7 +127,7 @@ function ChatView({ pro, conversation, onSend, onBack, onBook }: {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [conversation.messages]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isCompleted) return;
     onSend(input.trim());
     setInput('');
     setTyping(true);
@@ -122,19 +141,20 @@ function ChatView({ pro, conversation, onSend, onBack, onBook }: {
         <button onClick={onBack} className="lg:hidden text-gray-500 hover:text-gray-700 p-1"><ChevronLeft size={22} /></button>
         <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${pro.avatarColor} flex items-center justify-center text-white font-bold text-sm shadow relative shrink-0`}>
           {pro.avatar}
-          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${pro.available ? 'bg-green-500' : 'bg-gray-300'}`} />
+          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isCompleted ? 'bg-green-500' : pro.available ? 'bg-green-500' : 'bg-gray-300'}`} />
         </div>
         <div className="flex-1">
           <p className="font-bold text-gray-900 text-sm">{pro.name}</p>
-          <p className="text-xs text-gray-400">{pro.available ? '● En ligne' : '○ Hors ligne'} · {pro.specialty}</p>
+          <p className="text-xs text-gray-400">
+            {isCompleted ? '✅ Mission terminée' : pro.available ? '● En ligne' : '○ Hors ligne'} · {pro.specialty}
+          </p>
         </div>
-        <button onClick={onBook}
-          className="hidden sm:flex items-center gap-1.5 bg-[#E30613] hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors shadow">
-          <Calendar size={13} /> Réserver
-        </button>
-        <a href={`tel:${pro.phone}`} className="p-2 text-gray-400 hover:text-[#1E5BB8] hover:bg-blue-50 rounded-xl transition-colors">
-          <Phone size={17} />
-        </a>
+        {!isCompleted && (
+          <button onClick={onBook}
+            className="hidden sm:flex items-center gap-1.5 bg-[#E30613] hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors shadow">
+            <Calendar size={13} /> Réserver à nouveau
+          </button>
+        )}
         <button onClick={() => setMuted(!muted)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
           {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
         </button>
@@ -147,7 +167,6 @@ function ChatView({ pro, conversation, onSend, onBack, onBook }: {
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                 className="absolute right-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 py-1">
                 {[
-                  { icon: <Calendar size={14} />, label: 'Réserver', action: onBook, color: 'text-[#E30613]' },
                   { icon: <Flag size={14} />, label: 'Signaler', action: () => {}, color: 'text-gray-500' },
                   { icon: <X size={14} />, label: 'Vider le chat', action: () => {}, color: 'text-orange-500' },
                 ].map(item => (
@@ -206,11 +225,22 @@ function ChatView({ pro, conversation, onSend, onBack, onBook }: {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Completed mission banner inside chat */}
+        {isCompleted && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center mt-4">
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-sm">
+              <CheckCircle2 size={14} /> Mission terminée · messagerie désactivée
+            </div>
+          </motion.div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
-      {/* Quick replies */}
-      {conversation.messages.length <= 3 && (
+      {/* Quick replies — only when chat is active */}
+      {!isCompleted && conversation.messages.length <= 3 && (
         <div className="bg-white border-t border-gray-100 px-3 py-2">
           <div className="flex gap-2 overflow-x-auto">
             {QUICK_REPLIES.map(qr => (
@@ -223,22 +253,59 @@ function ChatView({ pro, conversation, onSend, onBack, onBook }: {
         </div>
       )}
 
-      {/* Input */}
-      <div className="bg-white border-t border-gray-100 px-3 py-3 flex items-center gap-2">
-        {/* Mobile reserve button */}
-        <button onClick={onBook} className="sm:hidden shrink-0 w-9 h-9 bg-[#E30613] hover:bg-red-700 text-white rounded-xl flex items-center justify-center transition-colors">
-          <Calendar size={15} />
-        </button>
-        <div className="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 focus-within:border-[#1E5BB8] focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-          <input value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="Tapez un message..."
-            className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400" />
+      {/* Input area */}
+      {isCompleted ? (
+        <div className="bg-white border-t border-gray-100 px-4 py-4">
+          <div className="flex items-center justify-center gap-2 bg-gray-50 rounded-2xl px-4 py-3 border border-dashed border-gray-200">
+            <Lock size={14} className="text-gray-300" />
+            <p className="text-sm text-gray-400 font-medium">Messagerie désactivée — mission terminée</p>
+          </div>
         </div>
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          onClick={handleSend} disabled={!input.trim()}
-          className="w-10 h-10 rounded-xl bg-[#1E5BB8] hover:bg-[#243B82] text-white flex items-center justify-center transition-colors disabled:opacity-40 shadow-md">
-          <Send size={16} />
+      ) : (
+        <div className="bg-white border-t border-gray-100 px-3 py-3 flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2.5 focus-within:border-[#1E5BB8] focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+            <input value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              placeholder="Tapez un message..."
+              className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400" />
+          </div>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={handleSend} disabled={!input.trim()}
+            className="w-10 h-10 rounded-xl bg-[#1E5BB8] hover:bg-[#243B82] text-white flex items-center justify-center transition-colors disabled:opacity-40 shadow-md">
+            <Send size={16} />
+          </motion.button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Locked chat placeholder ────────────────────────────────────────────────── */
+function LockedChat({ pro, onBook }: { pro: Pro; onBook: () => void }) {
+  return (
+    <div className="flex flex-col h-full bg-[#f0f4fb]">
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
+        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${pro.avatarColor} flex items-center justify-center text-white font-bold text-sm shadow shrink-0`}>
+          {pro.avatar}
+        </div>
+        <div className="flex-1">
+          <p className="font-bold text-gray-900 text-sm">{pro.name}</p>
+          <p className="text-xs text-gray-400">{pro.specialty}</p>
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+        <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mb-5 shadow-inner">
+          <Lock size={32} className="text-amber-500" />
+        </div>
+        <p className="font-black text-gray-800 text-lg mb-2">Messagerie verrouillée</p>
+        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+          Vous pouvez contacter <span className="font-bold text-gray-700">{pro.name}</span> uniquement
+          après avoir effectué et payé une réservation.
+        </p>
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={onBook}
+          className="flex items-center gap-2 bg-[#1E5BB8] hover:bg-[#243B82] text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-blue-900/20 transition-colors">
+          <Calendar size={16} /> Réserver maintenant
         </motion.button>
       </div>
     </div>
@@ -246,7 +313,14 @@ function ChatView({ pro, conversation, onSend, onBack, onBook }: {
 }
 
 /* ── Main ──────────────────────────────────────────────────────────────────── */
-export function MessagesPage({ conversations, onSendMessage, onSelectPro, onBook }: MessagesPageProps) {
+export function MessagesPage({
+  conversations,
+  onSendMessage,
+  onSelectPro,
+  onBook,
+  activeBookingProIds = [],
+  completedBookingProIds = [],
+}: MessagesPageProps) {
   const [activeProId, setActiveProId] = useState<number | null>(
     conversations.length > 0 ? conversations[0].proId : null
   );
@@ -258,6 +332,9 @@ export function MessagesPage({ conversations, onSendMessage, onSelectPro, onBook
 
   const activePro = PROS.find(p => p.id === activeProId);
   const activeConv = conversations.find(c => c.proId === activeProId) || (activePro ? { proId: activePro.id, messages: [] } : null);
+
+  const isLocked    = (proId: number) => !activeBookingProIds.includes(proId) && !completedBookingProIds.includes(proId);
+  const isCompleted = (proId: number) => completedBookingProIds.includes(proId);
 
   const convList = conversations
     .filter(c => !deletedIds.includes(c.proId))
@@ -290,17 +367,14 @@ export function MessagesPage({ conversations, onSendMessage, onSelectPro, onBook
         />
       )}
 
-      {/* ── Left panel: contacts ─────────────────────── */}
+      {/* ── Left panel ─────────────────────────────────────────────────── */}
       <div className={`${mobileShowChat ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-80 xl:w-96 bg-white border-r border-gray-100 shrink-0`}>
-        {/* Header */}
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-black text-gray-900 text-xl">Messages</h2>
-            <div className="flex items-center gap-1">
-              {conversations.length > 0 && (
-                <span className="text-xs font-bold bg-[#1E5BB8] text-white px-2 py-0.5 rounded-full">{convList.length}</span>
-              )}
-            </div>
+            {conversations.length > 0 && (
+              <span className="text-xs font-bold bg-[#1E5BB8] text-white px-2 py-0.5 rounded-full">{convList.length}</span>
+            )}
           </div>
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1E5BB8] focus-within:ring-2 focus-within:ring-blue-100 transition-all">
             <Search size={15} className="text-gray-400 shrink-0" />
@@ -308,18 +382,19 @@ export function MessagesPage({ conversations, onSendMessage, onSelectPro, onBook
               className="flex-1 bg-transparent outline-none text-sm placeholder-gray-400" />
           </div>
         </div>
-        {/* List */}
         <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
           {convList.length === 0 ? (
             <div className="text-center py-16 px-6">
               <MessageSquare size={40} className="text-gray-200 mx-auto mb-3" />
               <p className="font-semibold text-gray-500 text-sm">Aucun message</p>
-              <p className="text-xs text-gray-400 mt-1">Cliquez sur "Message" dans le profil d'un prestataire</p>
+              <p className="text-xs text-gray-400 mt-1">Réservez un prestataire pour démarrer une conversation</p>
             </div>
           ) : (
             convList.map(({ conv, pro }) => (
               <ConvItem key={pro.id} conv={conv} pro={pro}
                 isActive={activeProId === pro.id}
+                isLocked={isLocked(pro.id)}
+                isCompleted={isCompleted(pro.id)}
                 onClick={() => handleSelectConv(pro.id)}
                 onContextMenu={e => handleContextMenu(e, pro.id)} />
             ))
@@ -327,23 +402,28 @@ export function MessagesPage({ conversations, onSendMessage, onSelectPro, onBook
         </div>
       </div>
 
-      {/* ── Right panel: chat ────────────────────────── */}
+      {/* ── Right panel ────────────────────────────────────────────────── */}
       <div className={`${mobileShowChat ? 'flex' : 'hidden lg:flex'} flex-col flex-1 overflow-hidden`}>
         {activePro && activeConv ? (
-          <ChatView
-            pro={activePro}
-            conversation={activeConv}
-            onSend={text => onSendMessage(activePro.id, text)}
-            onBack={() => { setMobileShowChat(false); }}
-            onBook={() => onBook(activePro)}
-          />
+          isLocked(activePro.id) ? (
+            <LockedChat pro={activePro} onBook={() => onBook(activePro)} />
+          ) : (
+            <ChatView
+              pro={activePro}
+              conversation={activeConv}
+              onSend={text => onSendMessage(activePro.id, text)}
+              onBack={() => setMobileShowChat(false)}
+              onBook={() => onBook(activePro)}
+              isCompleted={isCompleted(activePro.id)}
+            />
+          )
         ) : (
           <div className="flex flex-col items-center justify-center h-full bg-[#f0f4fb]">
             <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-4">
               <MessageSquare size={40} className="text-[#1E5BB8]" />
             </div>
             <p className="font-black text-gray-700 text-xl mb-2">Vos messages</p>
-            <p className="text-gray-400 text-sm text-center max-w-xs">Sélectionnez une conversation ou envoyez un message depuis le profil d'un prestataire.</p>
+            <p className="text-gray-400 text-sm text-center max-w-xs">Sélectionnez une conversation ou réservez un prestataire pour démarrer.</p>
           </div>
         )}
       </div>

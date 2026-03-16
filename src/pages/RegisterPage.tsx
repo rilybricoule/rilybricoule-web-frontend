@@ -10,6 +10,11 @@ import { FaFacebook } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+// ── Hardcoded config (from .env) ──────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = '928030296798-931s851635rm1uq5aa8ig2db5a3lgk4j.apps.googleusercontent.com';
+const FACEBOOK_APP_ID = '911883924660335';
+const APP_URL = 'http://localhost:5173';
+
 type Role = 'client' | 'prestataire';
 type PrestataireType = 'entreprise' | 'auto-entrepreneur' | 'particulier';
 
@@ -26,7 +31,7 @@ type OAuthUser = {
   email: string;
   name: string;
   avatar?: string;
-  provider: 'google' | 'facebook' | 'apple';
+  provider: 'google' | 'facebook';
 };
 
 // ── File Upload Zone ──────────────────────────────────────────────────────────
@@ -85,21 +90,23 @@ function FileUploadZone({ files, onFiles, accept, label, hint, required = false,
         onDrop={handleDrop}
         onDragOver={e => { e.preventDefault(); setIsDrag(true); }}
         onDragLeave={() => setIsDrag(false)}
-        className={`border-2 border-dashed rounded-xl p-4 transition-all duration-200 ${isDrag ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}
+        className={`border-2 border-dashed rounded-xl p-4 transition-all duration-200 ${
+          isDrag ? 'border-orange-400 bg-orange-50' : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+        }`}
       >
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+          <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-400">
             {imageOnly ? <ImageIcon size={20} /> : <Upload size={20} />}
           </div>
           <p className="text-sm text-gray-500 font-medium">{isDrag ? 'Deposez ici' : 'Glissez votre fichier ici'}</p>
           <p className="text-xs text-gray-400">ou choisissez une source :</p>
           <div className="flex gap-2 flex-wrap justify-center">
             <button type="button" onClick={() => inputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
               <Upload size={12} /> Depuis mon ordinateur
             </button>
-            <button type="button" onClick={() => alert('Ajoutez https://apis.google.com/js/api.js et configurez votre cle .env pour activer Google Drive.')}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-300 text-gray-600 rounded-lg hover:border-blue-400 hover:text-blue-600 bg-white transition-colors">
+            <button type="button" onClick={() => alert('Configurez Google Drive dans vos parametres.')}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-300 text-gray-600 rounded-lg hover:border-orange-400 hover:text-orange-600 bg-white transition-colors">
               <DriveIcon /> Google Drive
             </button>
           </div>
@@ -127,7 +134,6 @@ function FileUploadZone({ files, onFiles, accept, label, hint, required = false,
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export function RegisterPage() {
-  // ── ALL STATE DECLARATIONS FIRST ───────────────────────────────────────
   const [role, setRole] = useState<Role>('client');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -142,10 +148,9 @@ export function RegisterPage() {
   const [clientData, setClientData] = useState({ nom: '', email: '', password: '', ville: '', adresse: '' });
   const [prestData, setPrestData] = useState({ nom: '', email: '', password: '', description: '', adresse: '', cin: '', ice: '' });
   const [pendingOAuth, setPendingOAuth] = useState<OAuthUser | null>(null);
-  const { loginWithGoogle, loginWithFacebook, loginWithApple, setUserFromOAuth, isLoading } = useAuth();
+  const { loginWithGoogle, loginWithFacebook, setUserFromOAuth, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // ── ALL useEffect / useCallback AFTER STATE ─────────────────────────────
   useEffect(() => {
     const pending = localStorage.getItem('fb_oauth_pending');
     if (!pending) return;
@@ -161,7 +166,6 @@ export function RegisterPage() {
     } catch { localStorage.removeItem('fb_oauth_pending'); }
   }, [role]);
 
-  // ── HELPERS ─────────────────────────────────────────────────────────────
   const triggerToast = (msg: string, path: string) => {
     setToastMsg(msg);
     setShowToast(true);
@@ -219,10 +223,8 @@ export function RegisterPage() {
       if (!pendingOAuth && !prestData.password) missing.push('mot de passe');
       if (!prestData.description) missing.push('description');
       if (!prestData.adresse) missing.push('adresse');
-      // Validate identity fields based on type
-      if (prestataireType === 'entreprise') {
-        if (!prestData.ice) missing.push('numero ICE');
-      } else if (prestataireType === 'particulier') {
+      if (prestataireType === 'entreprise' && !prestData.ice) missing.push('numero ICE');
+      if (prestataireType === 'particulier') {
         if (!prestData.cin) missing.push('CIN');
         if (!prestData.ice) missing.push('numero ICE');
       }
@@ -235,109 +237,143 @@ export function RegisterPage() {
     }
   };
 
-  // ── RENDER ──────────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
+return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'linear-gradient(135deg, #243B82 0%, #1E5BB8 50%, #1a4a9a 100%)' }}
+    >
+      {/* Subtle geometric background pattern */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-10"
+        style={{
+          backgroundImage: `radial-gradient(circle at 20% 20%, #ffffff 1px, transparent 1px),
+                            radial-gradient(circle at 80% 80%, #ffffff 1px, transparent 1px),
+                            radial-gradient(circle at 50% 50%, #ffffff 0.5px, transparent 0.5px)`,
+          backgroundSize: '60px 60px, 80px 80px, 40px 40px',
+        }}
+      />
+
+      <div className="w-full max-w-lg relative">
         {showToast && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2">
-            <CheckCircle size={20} /> {toastMsg}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-sm font-medium">
+            <CheckCircle size={18} className="text-green-400" /> {toastMsg}
           </motion.div>
         )}
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 overflow-hidden"
+        >
+          {/* Top accent bar */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-blue-400 to-orange-500 rounded-t-2xl" />
 
-          {/* Logo + Name */}
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-orange-500 rounded-xl flex items-center justify-center">
-              <Wrench size={20} className="text-white" />
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-2.5 mb-7">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+            >
+              <img src="/logos/nobg_logo.png" alt="RilyBricoule" className="h-6 w-6 object-contain" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-orange-500 bg-clip-text text-transparent">RilyBricoule</span>
+            <span className="text-xl font-bold tracking-tight text-gray-900">
+              Rily<span className="text-orange-500">Bricoule</span>
+            </span>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">Creez votre compte</h1>
+          <h1 className="text-[1.6rem] font-bold text-gray-900 text-center mb-1 tracking-tight">Creez votre compte</h1>
+          <p className="text-sm text-gray-400 text-center mb-6">Rejoignez la plateforme des artisans de confiance</p>
 
           {/* Role Toggle */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-6 gap-1">
             {(['client', 'prestataire'] as Role[]).map(r => (
               <button key={r} type="button" onClick={() => { setRole(r); setError(''); setPendingOAuth(null); }}
-                className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${role === r ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
-                {r === 'client' ? <User size={16} /> : <Briefcase size={16} />}
+                className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                  role === r
+                    ? r === 'client'
+                      ? 'bg-blue-700 text-white shadow-md'
+                      : 'bg-orange-500 text-white shadow-md'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                {r === 'client' ? <User size={15} /> : <Briefcase size={15} />}
                 {r === 'client' ? 'Je suis Client' : 'Je suis Prestataire'}
               </button>
             ))}
           </div>
 
-          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">{error}</div>}
+          {error && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">⚠</span> {error}
+            </motion.div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <AnimatePresence mode="wait">
 
               {/* CLIENT */}
               {role === 'client' && (
-                <motion.div key="client" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-4">
-                  <SocialButtons onGoogle={() => handleGoogleLogin()} onFacebook={() => loginWithFacebook('/register')} onApple={loginWithApple} isLoading={isLoading} />
+                <motion.div key="client" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.25 }} className="space-y-4">
+                  <SocialButtons onGoogle={() => handleGoogleLogin()} onFacebook={() => loginWithFacebook('/register')} isLoading={isLoading} />
                   <Divider />
                   {pendingOAuth && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
-                      {pendingOAuth.name} connecte via {pendingOAuth.provider}. Verifiez vos informations et cliquez sur Creer mon compte.
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700 flex items-start gap-2">
+                      <span className="text-blue-400 mt-0.5">✓</span>
+                      <span><strong>{pendingOAuth.name}</strong> connecte via {pendingOAuth.provider}. Verifiez et confirmez.</span>
                     </div>
                   )}
-                  <Field icon={<User size={18} />} label="Nom complet *" placeholder="Votre nom" value={clientData.nom} onChange={v => setClientData({ ...clientData, nom: v })} />
-                  <Field icon={<Mail size={18} />} label="Email *" type="email" placeholder="votre@email.com" value={clientData.email} onChange={v => setClientData({ ...clientData, email: v })} />
+                  <Field icon={<User size={16} />} label="Nom complet *" placeholder="Votre nom" value={clientData.nom} onChange={v => setClientData({ ...clientData, nom: v })} />
+                  <Field icon={<Mail size={16} />} label="Email *" type="email" placeholder="votre@email.com" value={clientData.email} onChange={v => setClientData({ ...clientData, email: v })} />
                   {!pendingOAuth && (
                     <PasswordField label="Mot de passe *" show={showPassword} onToggle={() => setShowPassword(!showPassword)} value={clientData.password} onChange={v => setClientData({ ...clientData, password: v })} />
                   )}
-                  <Field icon={<MapPin size={18} />} label="Ville" placeholder="Ex: Casablanca" value={clientData.ville} onChange={v => setClientData({ ...clientData, ville: v })} required={false} />
-                  <Field icon={<MapPin size={18} />} label="Adresse" placeholder="Votre adresse" value={clientData.adresse} onChange={v => setClientData({ ...clientData, adresse: v })} required={false} />
+                  <Field icon={<MapPin size={16} />} label="Ville" placeholder="Ex: Casablanca" value={clientData.ville} onChange={v => setClientData({ ...clientData, ville: v })} required={false} />
+                  <Field icon={<MapPin size={16} />} label="Adresse" placeholder="Votre adresse" value={clientData.adresse} onChange={v => setClientData({ ...clientData, adresse: v })} required={false} />
                 </motion.div>
               )}
 
               {/* PRESTATAIRE */}
               {role === 'prestataire' && (
-                <motion.div key="prest" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                  <SocialButtons onGoogle={() => handleGoogleLogin()} onFacebook={() => loginWithFacebook('/register')} onApple={loginWithApple} isLoading={isLoading} />
+                <motion.div key="prest" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }} className="space-y-4">
+                  <SocialButtons onGoogle={() => handleGoogleLogin()} onFacebook={() => loginWithFacebook('/register')} isLoading={isLoading} />
                   <Divider />
                   {pendingOAuth && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
-                      {pendingOAuth.name} connecte via {pendingOAuth.provider}. Completez les champs ci-dessous pour finaliser votre inscription.
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700 flex items-start gap-2">
+                      <span className="text-orange-400 mt-0.5">✓</span>
+                      <span><strong>{pendingOAuth.name}</strong> connecte via {pendingOAuth.provider}. Completez les champs ci-dessous.</span>
                     </div>
                   )}
 
-                  {/* ── Prestataire Type Radio ── */}
+                  {/* Type selector */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">Type de prestataire *</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { value: 'entreprise', label: 'Entreprise', desc: 'Societe enregistree', icon: <Building2 size={20} /> },
-                        { value: 'auto-entrepreneur', label: 'Auto-entrepreneur', desc: 'Statut independant', icon: <Briefcase size={20} /> },
-                        { value: 'particulier', label: 'Particulier', desc: 'Personne physique', icon: <UserCheck size={20} /> },
+                        { value: 'entreprise', label: 'Entreprise', desc: 'Societe enregistree', icon: <Building2 size={18} /> },
+                        { value: 'auto-entrepreneur', label: 'Auto-entrepreneur', desc: 'Statut independant', icon: <Briefcase size={18} /> },
+                        { value: 'particulier', label: 'Particulier', desc: 'Personne physique', icon: <UserCheck size={18} /> },
                       ].map(opt => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setPrestataireType(opt.value as PrestataireType)}
+                        <button key={opt.value} type="button" onClick={() => setPrestataireType(opt.value as PrestataireType)}
                           className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all duration-200 ${
                             prestataireType === opt.value
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-600'
-                          }`}
-                        >
-                          <span className={prestataireType === opt.value ? 'text-blue-600' : 'text-gray-400'}>{opt.icon}</span>
+                              ? 'border-orange-400 bg-orange-50 text-orange-700'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-500'
+                          }`}>
+                          <span className={prestataireType === opt.value ? 'text-orange-500' : 'text-gray-400'}>{opt.icon}</span>
                           <span className="text-xs font-semibold leading-tight">{opt.label}</span>
-                          <span className="text-xs text-gray-400 leading-tight">{opt.desc}</span>
+                          <span className="text-[10px] text-gray-400 leading-tight">{opt.desc}</span>
                           {prestataireType === opt.value && (
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full" />
                           )}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <Field icon={<User size={18} />} label="Nom ou raison sociale *" placeholder="Votre nom ou entreprise" value={prestData.nom} onChange={v => setPrestData({ ...prestData, nom: v })} />
-                  <Field icon={<Mail size={18} />} label="Email *" type="email" placeholder="votre@email.com" value={prestData.email} onChange={v => setPrestData({ ...prestData, email: v })} />
+                  <Field icon={<User size={16} />} label="Nom ou raison sociale *" placeholder="Votre nom ou entreprise" value={prestData.nom} onChange={v => setPrestData({ ...prestData, nom: v })} />
+                  <Field icon={<Mail size={16} />} label="Email *" type="email" placeholder="votre@email.com" value={prestData.email} onChange={v => setPrestData({ ...prestData, email: v })} />
                   {!pendingOAuth && (
                     <PasswordField label="Mot de passe *" show={showPassword} onToggle={() => setShowPassword(!showPassword)} value={prestData.password} onChange={v => setPrestData({ ...prestData, password: v })} />
                   )}
@@ -346,28 +382,27 @@ export function RegisterPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
                     <textarea rows={3} placeholder="Decrivez votre activite et votre experience..." value={prestData.description}
                       onChange={e => setPrestData({ ...prestData, description: e.target.value })}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none text-sm" />
+                      className="block w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all resize-none text-sm bg-gray-50 placeholder-gray-400" />
                   </div>
 
-                  <Field icon={<MapPin size={18} />} label="Adresse *" placeholder="Votre adresse professionnelle" value={prestData.adresse} onChange={v => setPrestData({ ...prestData, adresse: v })} />
+                  <Field icon={<MapPin size={16} />} label="Adresse *" placeholder="Votre adresse professionnelle" value={prestData.adresse} onChange={v => setPrestData({ ...prestData, adresse: v })} />
 
-                  {/* Conditional identity fields */}
                   <AnimatePresence mode="wait">
                     {prestataireType === 'entreprise' && (
                       <motion.div key="ice" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-                        <Field icon={<FileText size={18} />} label="Numero ICE *" placeholder="Identifiant Commun de l'Entreprise" value={prestData.ice} onChange={v => setPrestData({ ...prestData, ice: v })} />
+                        <Field icon={<FileText size={16} />} label="Numero ICE *" placeholder="Identifiant Commun de l'Entreprise" value={prestData.ice} onChange={v => setPrestData({ ...prestData, ice: v })} />
                       </motion.div>
                     )}
                     {prestataireType === 'particulier' && (
                       <motion.div key="cin" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }} className="space-y-4">
-                        <Field icon={<FileText size={18} />} label="CIN ou piece d'identite *" placeholder="Numero de CIN" value={prestData.cin} onChange={v => setPrestData({ ...prestData, cin: v })} />
-                        <Field icon={<FileText size={18} />} label="Numero ICE *" placeholder="Identifiant Commun de l'Entreprise" value={prestData.ice} onChange={v => setPrestData({ ...prestData, ice: v })} />
+                        <Field icon={<FileText size={16} />} label="CIN ou piece d'identite *" placeholder="Numero de CIN" value={prestData.cin} onChange={v => setPrestData({ ...prestData, cin: v })} />
+                        <Field icon={<FileText size={16} />} label="Numero ICE *" placeholder="Identifiant Commun de l'Entreprise" value={prestData.ice} onChange={v => setPrestData({ ...prestData, ice: v })} />
                       </motion.div>
                     )}
                     {prestataireType === 'auto-entrepreneur' && (
                       <motion.div key="ae" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 flex items-start gap-2">
-                          <span className="text-amber-500 mt-0.5">ℹ️</span>
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 flex items-start gap-2">
+                          <span className="text-gray-400 mt-0.5">ℹ️</span>
                           <span>En tant qu'auto-entrepreneur, aucun numero d'identification specifique n'est requis pour l'inscription.</span>
                         </div>
                       </motion.div>
@@ -376,46 +411,48 @@ export function RegisterPage() {
 
                   <FileUploadZone files={prestLogo} onFiles={setPrestLogo} accept="image/*" label="Photo / Logo" hint="(optionnel)" imageOnly required={false} />
 
+                  {/* Tags */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Categories de services * <span className="text-gray-400 font-normal">(Entree pour ajouter)</span>
+                      Categories de services * <span className="text-gray-400 font-normal text-xs">(Entree pour ajouter)</span>
                     </label>
-                    <div className="border border-gray-300 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500 min-h-[48px]">
+                    <div className="border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-400 focus-within:bg-white transition-all min-h-[48px]">
                       <div className="flex flex-wrap gap-2 mb-2">
                         {tags.map(tag => (
-                          <span key={tag} className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                          <span key={tag} className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">
                             {tag}
-                            <button type="button" onClick={() => removeTag(tag)}><X size={12} /></button>
+                            <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-500 transition-colors"><X size={10} /></button>
                           </span>
                         ))}
                       </div>
                       <input type="text" placeholder="Ex: Plomberie, Electricite..." value={tagInput}
                         onChange={e => setTagInput(e.target.value)} onKeyDown={addTag}
-                        className="w-full outline-none text-sm text-gray-700 placeholder-gray-400" />
+                        className="w-full outline-none text-sm text-gray-700 placeholder-gray-400 bg-transparent" />
                     </div>
                   </div>
 
+                  {/* Tarifs */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tarifs par service *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tarifs par service</label>
                     <div className="space-y-2">
                       {tarifs.map((t, i) => (
                         <div key={i} className="flex gap-2 items-center">
                           <input type="text" placeholder="Service (ex: Plomberie)" value={t.service}
                             onChange={e => updateTarif(i, 'service', e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-orange-400 focus:border-transparent focus:bg-white transition-all" />
                           <div className="relative w-32">
-                            <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input type="text" placeholder="Prix/h" value={t.prix}
                               onChange={e => updateTarif(i, 'prix', e.target.value)}
-                              className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                              className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-orange-400 focus:border-transparent focus:bg-white transition-all" />
                           </div>
                           {tarifs.length > 1 && (
-                            <button type="button" onClick={() => removeTarif(i)} className="text-red-400 hover:text-red-600"><X size={18} /></button>
+                            <button type="button" onClick={() => removeTarif(i)} className="text-gray-300 hover:text-red-500 transition-colors"><X size={16} /></button>
                           )}
                         </div>
                       ))}
-                      <button type="button" onClick={addTarif} className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        <Plus size={16} /> Ajouter un tarif
+                      <button type="button" onClick={addTarif} className="flex items-center gap-1 text-orange-500 hover:text-orange-600 text-sm font-semibold transition-colors">
+                        <Plus size={15} /> Ajouter un tarif
                       </button>
                     </div>
                   </div>
@@ -423,44 +460,51 @@ export function RegisterPage() {
               )}
             </AnimatePresence>
 
-            <motion.button type="submit" disabled={isLoading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-r from-blue-600 via-orange-500 to-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2">
+            <motion.button type="submit" disabled={isLoading} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+              className={`w-full py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2 text-white ${
+                role === 'client'
+                  ? 'bg-blue-700 hover:bg-blue-800'
+                  : 'bg-orange-500 hover:bg-orange-600'
+              }`}>
               {isLoading
-                ? <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Creation...</>
-                : <>Creer mon compte <ArrowRight size={20} /></>}
+                ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Creation...</>
+                : <>Creer mon compte <ArrowRight size={18} /></>}
             </motion.button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-5 text-center text-sm text-gray-500">
             Deja un compte?{' '}
-            <a href="/login" className="text-blue-600 hover:text-blue-700 font-semibold">Se connecter</a>
+            <a href="/login" className={`font-semibold hover:underline ${role === 'client' ? 'text-blue-700' : 'text-orange-500'}`}>Se connecter</a>
           </p>
         </motion.div>
 
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-          className="text-center text-sm text-gray-500 mt-8">
-          En creant un compte, vous acceptez nos{' '}
-          <a href="#" className="text-blue-600 hover:underline">Conditions d'utilisation</a>
-          {' '}et notre{' '}
-          <a href="#" className="text-blue-600 hover:underline">Politique de confidentialite</a>
-        </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-center text-xs text-gray-400 mt-5"
+          >
+            En creant un compte, vous acceptez nos{' '}
+            <a href="#" className="text-gray-600 hover:underline">Conditions d'utilisation</a>
+            {' '}et notre{' '}
+            <a href="#" className="text-gray-600 hover:underline">Politique de confidentialite</a>
+          </motion.p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function SocialButtons({ onGoogle, onFacebook, onApple, isLoading }: { onGoogle: () => void; onFacebook: () => void; onApple: () => void; isLoading: boolean; }) {
+function SocialButtons({ onGoogle, onFacebook, isLoading }: { onGoogle: () => void; onFacebook: () => void; isLoading: boolean }) {
   return (
-    <div className="space-y-3">
-      <button type="button" onClick={onGoogle} disabled={isLoading} className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all font-medium text-gray-700 disabled:opacity-50">
-        <GoogleIcon /> Continuer avec Google
+    <div className="grid grid-cols-2 gap-3">
+      <button type="button" onClick={onGoogle} disabled={isLoading}
+        className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-all font-medium text-gray-700 text-sm disabled:opacity-50">
+        <GoogleIcon /> Google
       </button>
-      <button type="button" onClick={onFacebook} disabled={isLoading} className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all font-medium text-gray-700 disabled:opacity-50">
-        <FaFacebook size={22} className="text-[#1877F2]" /> Continuer avec Facebook
-      </button>
-      <button type="button" onClick={onApple} disabled={isLoading} className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-black hover:bg-gray-900 rounded-xl transition-all font-medium text-white disabled:opacity-50">
-        <AppleIcon /> Continuer avec Apple
+      <button type="button" onClick={onFacebook} disabled={isLoading}
+        className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl hover:border-blue-200 hover:bg-blue-50 transition-all font-medium text-gray-700 text-sm disabled:opacity-50">
+        <FaFacebook size={18} className="text-[#1877F2]" /> Facebook
       </button>
     </div>
   );
@@ -469,8 +513,8 @@ function SocialButtons({ onGoogle, onFacebook, onApple, isLoading }: { onGoogle:
 function Divider() {
   return (
     <div className="relative my-1">
-      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-      <div className="relative flex justify-center text-sm"><span className="px-4 bg-white text-gray-500">Ou avec votre email</span></div>
+      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
+      <div className="relative flex justify-center text-xs"><span className="px-4 bg-white text-gray-400 font-medium">Ou avec votre email</span></div>
     </div>
   );
 }
@@ -488,11 +532,11 @@ interface FieldProps {
 function Field({ icon, label, placeholder, value, onChange, type = 'text', required = true }: FieldProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">{icon}</div>
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">{icon}</div>
         <input type={type} required={required} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}
-          className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm" />
+          className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all text-sm placeholder-gray-400" />
       </div>
     </div>
   );
@@ -509,13 +553,13 @@ interface PasswordFieldProps {
 function PasswordField({ label, value, onChange, show, onToggle }: PasswordFieldProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Lock size={18} /></div>
-        <input type={show ? 'text' : 'password'} required placeholder="........" value={value} onChange={e => onChange(e.target.value)}
-          className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm" />
-        <button type="button" onClick={onToggle} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-          {show ? <Eye size={18} /> : <EyeOff size={18} />}
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400"><Lock size={16} /></div>
+        <input type={show ? 'text' : 'password'} required placeholder="••••••••" value={value} onChange={e => onChange(e.target.value)}
+          className="block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all text-sm" />
+        <button type="button" onClick={onToggle} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+          {show ? <Eye size={16} /> : <EyeOff size={16} />}
         </button>
       </div>
     </div>
@@ -524,7 +568,7 @@ function PasswordField({ label, value, onChange, show, onToggle }: PasswordField
 
 function GoogleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 48 48">
+    <svg width="18" height="18" viewBox="0 0 48 48">
       <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.2 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.9 6.1C12.8 13.2 17.9 9.5 24 9.5z"/>
       <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/>
       <path fill="#FBBC05" d="M10.9 28.6A14.8 14.8 0 019.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.4-6z"/>
@@ -533,17 +577,9 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg width="18" height="22" viewBox="0 0 814 1000" fill="white">
-      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-150.3-88.1C27.8 768.4 1 583.7 1 406.7c0-290.2 184.5-443.9 366-443.9 96.2 0 176.2 63.5 235.8 63.5 54.4 0 140.1-67.5 250.8-67.5 40.3 0 108.2 3.7 171.2 55.8zm-178.2-102.4c-54.4 0-130.3-51.8-213.1-51.8-20.5 0-41.1 2.4-61.1 7.4 35.9-91.4 107.2-143.1 172.2-143.1 53.3 0 122.1 38.4 122.1 118.5 0 23.7-7.9 55.5-20.1 69z"/>
-    </svg>
-  );
-}
-
 function DriveIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 87.3 78">
+    <svg width="13" height="13" viewBox="0 0 87.3 78">
       <path fill="#0066da" d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z"/>
       <path fill="#00ac47" d="M43.65 25 29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.5c-.8 1.4-1.2 2.95-1.2 4.5h27.5z"/>
       <path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z"/>

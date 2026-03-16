@@ -5,7 +5,7 @@ interface User {
   email: string;
   name: string;
   avatar?: string;
-  provider?: 'email' | 'google' | 'facebook' | 'apple';
+  provider?: 'email' | 'google' | 'facebook' ;
 }
 
 interface AuthContextType {
@@ -17,7 +17,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (profile: any) => void;
   loginWithFacebook: (origin?: string) => void;
-  loginWithApple: () => void;
   setUserFromOAuth: (user: User, message?: string) => void;
   logout: () => void;
 }
@@ -25,8 +24,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
-const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
-const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = "928030296798-931s851635rm1uq5aa8ig2db5a3lgk4j.apps.googleusercontent.com";
+const FACEBOOK_APP_ID = "911883924660335";
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -74,34 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithFacebook = (origin?: string) => {
-    if (!FACEBOOK_APP_ID) { alert('Facebook App ID manquant dans .env'); return; }
-    // Save where the user came from so the callback can redirect back
     localStorage.setItem('fb_oauth_origin', origin || window.location.pathname);
     window.location.href =
       `https://www.facebook.com/v18.0/dialog/oauth` +
       `?client_id=${FACEBOOK_APP_ID}` +
       `&redirect_uri=${encodeURIComponent(`${APP_URL}/auth/facebook/callback`)}` +
       `&scope=public_profile&response_type=token`;
-  };
-
-  const loginWithApple = () => {
-    if (!APPLE_CLIENT_ID) {
-      alert('Apple Client ID manquant.\nAjoutez VITE_APPLE_CLIENT_ID dans .env\nConsultez le guide APPLE_OAUTH_GUIDE.md');
-      return;
-    }
-    const state = crypto.randomUUID();
-    const nonce = crypto.randomUUID();
-    sessionStorage.setItem('apple_oauth_state', state);
-    const params = new URLSearchParams({
-      client_id: APPLE_CLIENT_ID,
-      redirect_uri: `${APP_URL}/auth/apple/callback`,
-      response_type: 'code id_token',
-      scope: 'name email',
-      response_mode: 'form_post',
-      state,
-      nonce,
-    });
-    window.location.href = `https://appleid.apple.com/auth/authorize?${params}`;
   };
 
   const setUserFromOAuth = (u: User, message?: string) => {
@@ -118,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isAuthenticated: !!user, isLoading, successMessage, clearSuccess,
-      login, loginWithGoogle, loginWithFacebook, loginWithApple, setUserFromOAuth, logout,
+      login, loginWithGoogle, loginWithFacebook, setUserFromOAuth, logout,
     }}>
       {children}
     </AuthContext.Provider>

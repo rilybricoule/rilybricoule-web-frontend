@@ -1,142 +1,110 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Wrench, Hammer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Apple, PlayCircle, Search, MapPin, ChevronRight, Star } from 'lucide-react';
 
 export function HeroSection() {
-  const images = [
-    'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1590959651373-a3db0f38a961?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=400&h=500&fit=crop',
-    'https://images.unsplash.com/photo-1534237886190-ced735ca4b73?w=400&h=500&fit=crop'
-  ];
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-
-  const checkScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', checkScroll);
-      checkScroll();
-      return () => scrollContainer.removeEventListener('scroll', checkScroll);
-    }
-  }, []);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = 280;
-      const newScrollPosition = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      scrollRef.current.scrollTo({
-        left: newScrollPosition,
-        behavior: 'smooth'
-      });
-    }
-  };
-
   return (
-    <section className="pt-32 pb-20 px-6 bg-gradient-to-br from-blue-100 via-blue-50 to-white overflow-hidden">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div className="reveal">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-grey-900">
-                Votre Bricoleur
-                <span className="block gradient-text mt-2 bg-gradient-to-r from-blue-600 via-orange-500 to-cyan-500 bg-clip-text text-transparent">
-                  À Domicile
-                </span>
-              </h1>
-              
-              <div className="flex items-center gap-3 text-xl text-gray-700 mb-8 flex-wrap">
-                <span className="flex items-center gap-2">
-                  <Wrench className="text-blue-600" size={22} />
-                  <span className="font-medium">Rapide</span>
-                </span>
-                <span className="text-orange-400">•</span>
-                <span className="flex items-center gap-2">
-                  <Calendar className="text-orange-500" size={22} />
-                  <span className="font-medium">Fiable</span>
-                </span>
-                <span className="text-orange-400">•</span>
-                <span className="flex items-center gap-2">
-                  <Hammer className="text-cyan-600" size={22} />
-                  <span className="font-medium">Professionnel</span>
-                </span>
-              </div>
+    <section className="relative min-h-screen pt-32 pb-20 px-6 bg-[#1A2B5A] flex items-center overflow-hidden">
+      {/* Overlay dégradé pour la profondeur */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#131E3D] via-transparent to-[#1E5BB8]/10"></div>
 
-              <p className="text-gray-700 mb-8 leading-relaxed text-lg">
-                Découvrez les Meilleurs Services à Domicile pour Simplifier Votre Vie : Dans un monde où le temps est précieux, découvrez les meilleurs services à domicile qui transformeront votre quotidien. Simplifiez votre vie dès aujourd'hui !
-              </p>
-
-              <div className="flex flex-wrap gap-4">
-                <motion.button
-                  className="bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg hover:shadow-2xl transition-all duration-300"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Trouver un professionnel
-                </motion.button>
-                <motion.button
-                  className="border-2 border-blue-500 text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-orange-50 transition-all duration-300"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Devenir prestataire
-                </motion.button>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Content - Image Carousel */}
-          <motion.div 
-            className="reveal relative"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+      <div className="max-w-7xl mx-auto w-full relative z-10">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          
+          {/* --- CÔTÉ GAUCHE : TEXTE MINIMALISTE --- */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
           >
-            <div className="relative">
+            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-[1.1] text-white tracking-tight">
+              L'application <br />
+              <span className="text-white/90 font-light italic">tout-en-un</span> <br />
+              pour vos travaux.
+            </h1>
 
-              <div 
-                ref={scrollRef}
-                className="carousel-scroll flex gap-4 overflow-x-auto pb-4 snap-x "
-              >
-                {images.map((img, i) => (
-                  <motion.div
-                    key={i}
-                    className="parallax-container flex-shrink-0 w-64 h-80 rounded-2xl overflow-hidden duration-300 snap-center"
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 + 0.3, duration: 0.6 }}
-                    whileHover={{ y: -10, scale: 1.02 }}
-                  >
-                    <img 
-                      src={img} 
-                      alt={`Service de bricolage ${i + 1}`} 
-                      className="parallax-img w-full h-full object-cover" 
-                    />
-
-                  </motion.div>
-                ))}
+            <div className="flex flex-wrap gap-4 mb-10">
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-3">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" className="h-10 cursor-pointer hover:opacity-80 transition" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" className="h-10 cursor-pointer hover:opacity-80 transition" />
+                </div>
+                <div className="mt-4 p-3 bg-white w-24 h-24 rounded-xl flex items-center justify-center shadow-2xl">
+                   {/* Simu QR Code */}
+                   <div className="w-full h-full bg-[url('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=RilyBricoule')] bg-cover"></div>
+                </div>
               </div>
+
             </div>
           </motion.div>
+
+          {/* --- CÔTÉ DROIT : SMARTPHONE STYLE THUMBTACK --- */}
+          <motion.div 
+            className="relative flex justify-center lg:justify-end"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+          >
+            {/* Le téléphone (Light Mode pour le contraste) */}
+            <div className="relative w-[320px] h-[650px] bg-white rounded-[3rem] border-[10px] border-[#0F172A] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.6)] overflow-hidden">
+              
+              {/* Status Bar App */}
+              <div className="p-6 pt-10">
+                <div className="flex items-center gap-2 text-[#1A2B5A] mb-1">
+                   <MapPin size={16} className="text-[#E30613]" />
+                   <span className="font-bold text-lg">Maroc,Casablanca</span>
+                   <ChevronRight size={16} />
+                </div>
+                <div className="flex gap-4 text-sm text-gray-500 font-medium mb-6">
+                   <span className="text-[#1E5BB8] border-b-2 border-[#1E5BB8]">Projets</span>
+                   <span>Entretien</span>
+                   <span>Plus</span>
+                </div>
+
+                <h2 className="text-2xl font-bold text-slate-800 mb-4">Améliorez votre chez-vous</h2>
+
+                {/* Card Service 1 */}
+                <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 mb-4 flex gap-4">
+                  <div className="w-20 h-20 bg-gray-200 rounded-xl overflow-hidden shrink-0">
+                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200" className="w-full h-full object-cover" alt="lavage" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Nettoyage Vitres</h3>
+                    <p className="text-xs text-gray-500 mb-1">150DH - 250Dh moy.</p>
+                    <div className="flex items-center gap-1 text-[10px] bg-blue-100 text-blue-700 w-fit px-2 py-0.5 rounded-full font-bold">
+                       <Star size={10} fill="currentColor" /> 4.9 (120 avis)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Service 2 */}
+                <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex gap-4 opacity-90 scale-95 origin-left">
+                  <div className="w-20 h-20 bg-gray-200 rounded-xl overflow-hidden shrink-0">
+                    <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200" className="w-full h-full object-cover" alt="elec" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Électricité</h3>
+                    <p className="text-xs text-gray-500 italic">Devis gratuit</p>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="mt-8 p-4 bg-blue-50 rounded-2xl">
+                  <p className="text-xs text-blue-900 font-medium">
+                    <span className="font-bold block mb-1">Le saviez-vous ?</span>
+                    Un entretien régulier de votre plomberie peut vous faire économiser 200€/an.
+                  </p>
+                </div>
+              </div>
+
+              {/* Dynamic Island */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-[#0F172A] rounded-b-3xl z-30"></div>
+            </div>
+
+            {/* Décoration "Cercle" derrière le téléphone */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-white/5 rounded-full -z-10 border border-white/10"></div>
+          </motion.div>
+
         </div>
       </div>
     </section>

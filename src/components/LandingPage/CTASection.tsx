@@ -4,7 +4,7 @@ import { ArrowRight, Wrench } from 'lucide-react';
 
 export function CTASection() {
   return (
-    <section className="py-20 px-6 bg-gradient-to-br from-grey-50 via-orange-50 to-blue-50 overflow-hidden">
+    <section className="py-20 px-6 bg-gradient-to-br from-[#F2F3F5] via-[#E5E7EB] to-[#1E5BB8] overflow-hidden">
       <div className="max-w-4xl mx-auto text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -13,7 +13,7 @@ export function CTASection() {
           transition={{ duration: 0.8 }}
         >
           <motion.div
-            className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-5 py-2.5 rounded-full mb-6"
+            className="inline-flex items-center gap-2 bg-[#E30613]/10 text-[#E30613] px-5 py-2.5 rounded-full mb-6"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
@@ -23,9 +23,9 @@ export function CTASection() {
             <span className="text-sm font-semibold">Rejoignez des milliers d'utilisateurs satisfaits</span>
           </motion.div>
 
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-[#243B82]">
             Prêt à trouver votre
-            <span className="block gradient-text mt-2 bg-gradient-to-r from-blue-600 via-orange-500 to-cyan-500 bg-clip-text text-transparent">
+            <span className="block gradient-text mt-2 bg-gradient-to-r from-[#1E5BB8] via-[#E30613] to-[#243B82] bg-clip-text text-transparent">
               professionnel idéal ?
             </span>
           </h2>
@@ -37,10 +37,10 @@ export function CTASection() {
 
           <div className="flex flex-wrap gap-4 justify-center">
             <motion.button
-              className="bg-gradient-to-r from-blue-600 via-orange-500 to-blue-600 bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-12 py-5 rounded-full text-lg font-semibold shadow-xl flex items-center gap-2 transition-all duration-300"
+              className="bg-gradient-to-r from-[#1E5BB8] via-[#E30613] to-[#243B82] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-12 py-5 rounded-full text-lg font-semibold shadow-xl flex items-center gap-2 transition-all duration-300"
               whileHover={{ 
                 scale: 1.05, 
-                boxShadow: '0 25px 50px rgba(249, 115, 22, 0.4)' 
+                boxShadow: '0 25px 50px rgba(227, 6, 19, 0.4)' 
               }}
               whileTap={{ scale: 0.95 }}
             >
@@ -49,7 +49,7 @@ export function CTASection() {
             </motion.button>
 
             <motion.button
-              className="border-2 border-orange-500 text-orange-600 px-12 py-5 rounded-full text-lg font-semibold hover:bg-orange-50 transition-all duration-300"
+              className="border-2 border-[#E30613] text-[#E30613] px-12 py-5 rounded-full text-lg font-semibold hover:bg-[#E30613]/10 transition-all duration-300"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >

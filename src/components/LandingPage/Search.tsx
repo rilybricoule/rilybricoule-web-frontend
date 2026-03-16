@@ -115,7 +115,7 @@ export function HeroSearch() {
               ════════════════════════════════════════════════════ */}
           <button
             type="submit"
-            className="m-2 px-8 py-3 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-semibold rounded-xl transition-all duration-200 shrink-0 self-stretch md:self-auto flex items-center justify-center"
+            className="m-2 px-8 py-3 bg-blue-900 hover:bg-blue-900 active:scale-95 text-white font-semibold rounded-xl transition-all duration-200 shrink-0 self-stretch md:self-auto flex items-center justify-center"
           >
             Rechercher
           </button>
